@@ -1,0 +1,53 @@
+---
+- name: Prepare UA nodes
+  hosts: ua_controllers:ua_workers
+  become: true
+
+  tasks:
+    - name: Clear known hosts to avoid host conflicts
+      ansible.builtin.known_hosts:
+        name: "{{ ansible_host }}"
+        state: absent
+      delegate_to: 127.0.0.1
+      become: false
+
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ settings | from_json | json_query('timezone') }}"
+
+    - name: Install the required packages
+      ansible.builtin.package:
+        name:
+          - nfs-utils
+          - policycoreutils-python-utils
+          - conntrack-tools
+          - jq
+          - tar
+        state: present
+
+    - name: Ensure iscsi utils
+      ansible.builtin.shell: |
+        dnf --setopt=tsflags=noscripts install -y -q iscsi-initiator-utils
+        echo "InitiatorName=$(/sbin/iscsi-iname)" | sudo tee -a /etc/iscsi/initiatorname.iscsi
+
+    - name: Enable and start iscsid
+      ansible.builtin.service:
+        name: iscsid
+        enabled: true
+        state: started
+
+    - name: Add the ip_tables module
+      community.general.modprobe:
+        name: ip_tables
+        state: present
+
+    - name: Configure firewalld
+      ansible.builtin.shell: |
+        sed -i 's/FirewallBackend=.*/FirewallBackend=iptables/' /etc/firewalld/firewalld.conf
+        ethtool -K eth0 tx-checksum-ip-generic off
+
+    - name: Restart firewalld
+      ansible.builtin.service:
+        name: firewalld
+        state: restarted
+      ignore_errors: yes

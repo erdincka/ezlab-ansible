@@ -1,0 +1,14 @@
+---
+- name: Deploy VMs with terraform
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Create resources using terraform
+      cloud.terraform.terraform:
+        project_path: '{{ playbook_dir }}/tf'
+        complex_vars: true
+        variables_files: "../winnersh-50.tfvars.json"
+        state: present
+      register: terraform_returns

@@ -1,0 +1,13 @@
+defaultHostCredentials:
+  sshUserName: {{ username }}
+  sshPassword: {{ password_b64 }}
+  sshPort: 22
+hosts:
+  - host: {{ controller }}
+    labels:
+    - role: controlplane
+  {% for worker in workers %}
+- host: {{ worker }}
+    labels:
+    - role: worker
+  {% endfor %}

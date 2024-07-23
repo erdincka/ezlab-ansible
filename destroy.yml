@@ -1,0 +1,13 @@
+---
+- name: Remove VMs using terraform
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  
+  tasks:
+    - name: Destroy resources using terraform
+      cloud.terraform.terraform:
+        project_path: '{{ playbook_dir }}/tf'
+        complex_vars: yes
+        variables_files: "../home-ua40.tfvars.json"
+        state: absent
