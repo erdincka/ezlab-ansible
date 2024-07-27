@@ -5,18 +5,21 @@
   gather_facts: false
 
   tasks:
-    - name: Create resources using terraform
-      cloud.terraform.terraform:
-        project_path: '{{ playbook_dir }}/tf'
-        complex_vars: true
-        # Expect vars to be provided in environment or via cli
-        # variables_files: "../home-40.tfvars.json"
-        force_init: true
-        state: present
-      register: terraform_returns
+    - name: debug
+      ansible.builtin.debug:
+        msg: "{{ ansible_env }}"
+    # - name: Create resources using terraform
+    #   cloud.terraform.terraform:
+    #     project_path: '{{ playbook_dir }}/tf'
+    #     complex_vars: true
+    #     # Expect vars to be provided in environment or via cli
+    #     # variables_files: "../home-40.tfvars.json"
+    #     force_init: true
+    #     state: present
+    #   register: terraform_returns
 
-    - name: clean up known hosts
-      ansible.builtin.known_hosts:
-        name: "{{ item.value }}"
-        state: absent
-      with_dict: "{{ (terraform_returns.outputs.df_nodes | ansible.builtin.combine(terraform_returns.outputs.ua_nodes, list_merge='append', recursive=true)).value }}"
+    # - name: clean up known hosts
+    #   ansible.builtin.known_hosts:
+    #     name: "{{ item.value }}"
+    #     state: absent
+    #   with_dict: "{{ (terraform_returns.outputs.df_nodes | ansible.builtin.combine(terraform_returns.outputs.ua_nodes, list_merge='append', recursive=true)).value }}"
