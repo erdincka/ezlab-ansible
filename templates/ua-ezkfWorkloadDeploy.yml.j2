@@ -12,7 +12,7 @@ type: Opaque
 ---
 apiVersion: v1
 data:
-  internal_auth: {{ auth_data }}
+  internal_auth: {{ authdata_b64 }}
 kind: Secret
 metadata:
   name: authconfig
@@ -39,7 +39,7 @@ spec:
   proxy:
     httpProxy: {{ http_proxy}}
     httpsProxy: {{ https_proxy }}
-    noProxy: {{ no_proxy }}
+    noProxy: {{ noproxy }}
   workloadaddons:
     ua_prep: true
     hpecp_agent: true

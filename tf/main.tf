@@ -1,3 +1,25 @@
+terraform {
+  required_providers {
+    proxmox = {
+      source  = "telmate/proxmox"
+      version = "3.0.1-rc3"
+    }
+    ansible = {
+      version = "~> 1.3.0"
+      source  = "ansible/ansible"
+    }
+  }
+}
+
+provider "proxmox" {
+  pm_api_url = "https://${var.pve.host}:8006/api2/json"
+  pm_user = "${var.pve.username}"
+  pm_password = "${var.pve.password}"
+  pm_tls_insecure = true
+  pm_log_enable = true
+  pm_debug = true
+}
+
 data "tls_public_key" "private_key_pem" {
   private_key_openssh = var.settings.private_key
 }

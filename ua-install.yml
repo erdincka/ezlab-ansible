@@ -3,6 +3,11 @@
   hosts: localhost
   connection: local
 
+  pre_tasks:
+    - name: include settings
+      ansible.builtin.include_vars: "./home-40.tfvars.json"
+      tags: ["always"]
+
   vars:
     - no_proxy: "10.96.0.0/12,10.224.0.0/16,10.43.0.0/16,192.168.0.0/16,.external.hpe.local,localhost,.cluster.local,.svc,.default.svc,127.0.0.1,169.254.169.254,{{ groups['ua_controllers'][0] }},{{ groups['ua_controllers'][1] }},.{{ settings['domain'] }}"
 
@@ -21,9 +26,9 @@
       vars:
         - username: "{{ settings['username'] | default('admin') }}"
         - password_b64: "{{ settings['password'] | default('Admin123.') | b64encode }}"
-        - orchestrator: "{{ groups['ua_controllers'][0] }}"
-        - controlplane: "{{ groups['ua_controllers'][1] }}"
-        - workers: "{{ groups['ua_workers'] }}"
+        - orchestrator: "{{ hostvars[groups['ua_controllers'][0]]['ansible_host'] }}"
+        - controlplane: "{{ hostvars[groups['ua_controllers'][1]]['ansible_host'] }}"
+        - workers: "{{ groups['ua_workers'] | map('extract', hostvars, ['ansible_host']) }}"
 
 # {ezfabricctl_cmd} pc -i /tmp/ua-prechecks.yaml -s /tmp/prechecksStatus.txt
 
@@ -39,7 +44,6 @@
         - controller: "{{ groups['ua_controllers'][0] }}"
         - http_proxy: "{{ settings['proxy'] | default('') }}"
         - https_proxy: "{{ settings['proxy'] | default('') }}"
-        - no_proxy: "{{ settings['no_proxy'] | default('') }}"
 
 # {ezfabricctl_cmd} o init -p ./ezfab-release.tgz -i /tmp/ezkf-input.yaml -s ./.ezlab/ezkf-orch-status.txt --save-kubeconfig ./.ezlab/mgmt-kubeconfig
 
@@ -60,7 +64,7 @@
         src: ./templates/ua-clusterConfig.yml.j2
         dest: /tmp/clusterConfig.yaml
       vars:
-        - cluster_name: "{{ settings['cluster_name'] | default('ua') }}"
+        - clustername: "{{ ezua['clustername'] | default('ua') }}"
         - controller: "{{ groups['ua_controllers'][1] }}"
         - registryUrl: "{{ settings['registryUrl'] | default('') }}"
         - registryInsecure: "{{ settings['registryInsecure'] | default('false') }}"
@@ -82,10 +86,10 @@
         - registryUsername: "{{ ezua['registryUsername'] | default('') }}"
         - registryPassword_b64: "{{ settings['registryPassword'] | default('') | b64encode }}"
         - clustername: "{{ ezua['clustername'] | default('ezlab') }}"
-        - auth_data: "{{ auth_data | from_yaml | b64encode }}"
+        - authdata_b64: "{{ auth_data | from_yaml | b64encode }}"
         - domain: "{{ settings['domain'] | default('') }}"
         - http_proxy: "{{ settings['proxy'] | default('') }}"
         - https_proxy: "{{ settings['proxy'] | default('') }}"
-        - no_proxy: "{{ settings['no_proxy'] | default( no_proxy ) }}"
+        - noproxy: "{{ no_proxy }}"
 
 # {kubectl_cmd} --kubeconfig=/tmp/workload-kubeconfig apply -f /tmp/ezkfWorkloadDeploy.yaml

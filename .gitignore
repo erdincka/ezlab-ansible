@@ -8,4 +8,7 @@
 
 ./ezfab-release.tgz
 ./ezfabricctl
-.not-so-git
+tf/.terraform.lock.hcl
+log/
+tf/terraform-plugin-proxmox.log
+.ezstatus

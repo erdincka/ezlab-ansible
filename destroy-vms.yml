@@ -9,5 +9,5 @@
       cloud.terraform.terraform:
         project_path: '{{ playbook_dir }}/tf'
         complex_vars: yes
-        variables_files: "../winnersh-50.tfvars.json"
+        variables_files: "../home-40.tfvars.json"
         state: absent

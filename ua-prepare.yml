@@ -51,3 +51,36 @@
         name: firewalld
         state: restarted
       ignore_errors: yes
+
+    - name: Enable Password Authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication yes'
+        state: present
+        backup: true
+      notify:
+        - restart ssh
+
+    - name: Enable Root Login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?\s?PermitRootLogin.*$'
+        line: "PermitRootLogin yes"
+        state: present
+        backup: true
+      notify:
+        - restart ssh
+
+    - name: Remove cloud-init Root login prevention
+      replace:
+        path: /root/.ssh/authorized_keys
+        regexp: '^.*?(ssh-rsa .*)$'
+        replace: '\1'
+
+
+  handlers:
+  - name: restart ssh
+    service:
+      name: sshd
+      state: restarted
