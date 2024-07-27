@@ -10,6 +10,7 @@
         project_path: '{{ playbook_dir }}/tf'
         complex_vars: true
         variables_files: "../home-40.tfvars.json"
+        force_init: true
         state: present
       register: terraform_returns
 
