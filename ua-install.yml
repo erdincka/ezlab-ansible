@@ -9,26 +9,45 @@
       tags: ["always"]
 
   vars:
-    - no_proxy: "10.96.0.0/12,10.224.0.0/16,10.43.0.0/16,192.168.0.0/16,.external.hpe.local,localhost,.cluster.local,.svc,.default.svc,127.0.0.1,169.254.169.254,{{ groups['ua_controllers'][0] }},{{ groups['ua_controllers'][1] }},.{{ settings['domain'] }}"
+    # Generic params
+    - sshusername: "{{ settings['username'] | default('admin') }}"
+    - sshpassword_b64: "{{ settings['password'] | default('Admin123.') | b64encode }}"
+
+    - domain: "{{ settings['domain'] | default('') }}"
+
+    - http_proxy: "{{ settings['proxy'] | default('') }}"
+    - https_proxy: "{{ settings['proxy'] | default('') }}"
+    - no_proxy: "10.96.0.0/12,10.224.0.0/16,10.43.0.0/16,192.168.0.0/16,.external.hpe.local,localhost,.cluster.local,.svc,.default.svc,127.0.0.1,169.254.169.254,{{ groups['all'] | join(',') }},.{{ settings['domain'] }}"
+
+    # EZUA params
+    - clustername: "{{ ezua['clustername'] | default('ezlab') }}"
+    - orchestrator: "{{ hostvars[groups['ua_controllers'][0]]['ansible_host'] }}"
+    - master: "{{ hostvars[groups['ua_controllers'][1]]['ansible_host'] }}"
+    - workers: "{{ groups['ua_workers'] | map('extract', hostvars, ['ansible_host']) }}"
+
+    - ezusername: "{{ ezua['username'] | default('admin') }}"
+    - ezpassword_b64: "{{ ezua['password'] | default('Admin123.') | b64encode }}"
 
     - auth_data:
         admin_user:
           fullname: Ezmeral Admin
           email: "ezadmin@{{ settings['domain'] }}"
-          password: "{{ ezua['password'] }}"
-          username: "{{ ezua['username'] }}"
+          username: "{{ ezusername }}"
+          password: "{{ ezua['password'] | default('Admin123.') }}"
+
+    - authdata_b64: "{{ auth_data | from_yaml | b64encode }}"
+
+    - registryUrl: "{{ ezua['registryUrl'] | default('') }}"
+    - registryInsecure: "{{ ezua['registryInsecure'] | default('false') }}"
+    - registryCaFile: "{{ ezua['registryCaFile'] | default('') }}"
+    - registryUsername: "{{ ezua['registryUsername'] | default('') }}"
+    - registryPassword_b64: "{{ settings['registryPassword'] | default('') | b64encode }}"
 
   tasks:
     - name: Precheck Stanza
       ansible.builtin.template:
         src: ./templates/ua-precheck.yml.j2
         dest: /tmp/ua-prechecks.yaml
-      vars:
-        - username: "{{ settings['username'] | default('admin') }}"
-        - password_b64: "{{ settings['password'] | default('Admin123.') | b64encode }}"
-        - orchestrator: "{{ hostvars[groups['ua_controllers'][0]]['ansible_host'] }}"
-        - controlplane: "{{ hostvars[groups['ua_controllers'][1]]['ansible_host'] }}"
-        - workers: "{{ groups['ua_workers'] | map('extract', hostvars, ['ansible_host']) }}"
 
 # {ezfabricctl_cmd} pc -i /tmp/ua-prechecks.yaml -s /tmp/prechecksStatus.txt
 
@@ -36,14 +55,6 @@
       ansible.builtin.template:
         src: ./templates/ua-ezkfInput.yml.j2
         dest: /tmp/ezkf-input.yaml
-      vars:
-        - username: "{{ ezua['username'] | default('admin') }}"
-        - password_b64: "{{ ezua['password'] | default('Admin123.') | b64encode }}"
-        - registryUrl: "{{ ezua['registryUrl'] | default('') }}"
-        - registryInsecure: "{{ ezua['registryInsecure'] | default('false') }}"
-        - controller: "{{ groups['ua_controllers'][0] }}"
-        - http_proxy: "{{ settings['proxy'] | default('') }}"
-        - https_proxy: "{{ settings['proxy'] | default('') }}"
 
 # {ezfabricctl_cmd} o init -p ./ezfab-release.tgz -i /tmp/ezkf-input.yaml -s ./.ezlab/ezkf-orch-status.txt --save-kubeconfig ./.ezlab/mgmt-kubeconfig
 
@@ -51,11 +62,6 @@
       ansible.builtin.template:
         src: ./templates/ua-hostPoolConfig.yml.j2
         dest: /tmp/hostPoolConfig.yaml
-      vars:
-        - username: "{{ ezua['username'] | default('admin') }}"
-        - password_b64: "{{ ezua['password'] | default('Admin123.') | b64encode }}"
-        - controller: "{{ groups['ua_controllers'][1] }}"
-        - workers: "{{ groups['ua_workers'] }}"
 
 # {ezfabricctl_cmd} ph i -i /tmp/hostPoolConfig.yaml -c ./.ezlab/mgmt-kubeconfig -s ./.ezlab/hostPoolConfigStatus.txt
 
@@ -63,33 +69,16 @@
       ansible.builtin.template:
         src: ./templates/ua-clusterConfig.yml.j2
         dest: /tmp/clusterConfig.yaml
-      vars:
-        - clustername: "{{ ezua['clustername'] | default('ua') }}"
-        - controller: "{{ groups['ua_controllers'][1] }}"
-        - registryUrl: "{{ settings['registryUrl'] | default('') }}"
-        - registryInsecure: "{{ settings['registryInsecure'] | default('false') }}"
 
 # {ezfabricctl_cmd} w i -i /tmp/clusterConfig.yaml -c ./.ezlab/mgmt-kubeconfig -s ./.ezlab/clusterConfigStatus.txt
 
 ### GET CLUSTER KUBECONFIG
-# ezfabricctl_cmd} w g k -n {APPCONFIG[UA].get('clustername', 'ezlab')} -i ./.ezlab/clusterConfig.yaml -c ./.ezlab/mgmt-kubeconfig -s ./.ezlab/clusterConfigStatus.txt --save-kubeconfig /tmp/workload-kubeconfig
+# ezfabricctl_cmd} w g k -n {'clustername'} -i ./.ezlab/clusterConfig.yaml -c ./.ezlab/mgmt-kubeconfig -s ./.ezlab/clusterConfigStatus.txt --save-kubeconfig /tmp/workload-kubeconfig
 
 
     - name: WorkloadDeploy Stanza
       ansible.builtin.template:
         src: ./templates/ua-ezkfWorkloadDeploy.yml.j2
         dest: /tmp/ezkfWorkloadDeploy.yaml
-      vars:
-        - registryUrl: "{{ ezua['registryUrl'] | default('') }}"
-        - registryInsecure: "{{ ezua['registryInsecure'] | default('false') }}"
-        - registryCaFile: "{{ ezua['registryCaFile'] | default('') }}"
-        - registryUsername: "{{ ezua['registryUsername'] | default('') }}"
-        - registryPassword_b64: "{{ settings['registryPassword'] | default('') | b64encode }}"
-        - clustername: "{{ ezua['clustername'] | default('ezlab') }}"
-        - authdata_b64: "{{ auth_data | from_yaml | b64encode }}"
-        - domain: "{{ settings['domain'] | default('') }}"
-        - http_proxy: "{{ settings['proxy'] | default('') }}"
-        - https_proxy: "{{ settings['proxy'] | default('') }}"
-        - noproxy: "{{ no_proxy }}"
 
 # {kubectl_cmd} --kubeconfig=/tmp/workload-kubeconfig apply -f /tmp/ezkfWorkloadDeploy.yaml

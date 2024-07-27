@@ -1,6 +1,6 @@
 defaultHostCredentials:
-  sshUserName: {{ username }}
-  sshPassword: {{ password_b64 }}
+  sshUserName: {{ sshusername }}
+  sshPassword: {{ sshpassword_b64 }}
   sshPort: 22
 airgap:
   registryUrl: {{ registryUrl }}
@@ -17,7 +17,7 @@ orchestrator:
     services:
       cidrBlocks: 10.96.0.0/12
 hosts:
-  - host: {{ controller }}
+  - host: {{ orchestrator }}
 webproxy:
   httpProxy: {{ http_proxy }}
   httpsProxy: {{ https_proxy }}

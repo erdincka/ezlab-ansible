@@ -11,3 +11,17 @@
         complex_vars: yes
         variables_files: "../home-40.tfvars.json"
         state: absent
+
+    - name: Delete artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /tmp/clusterConfig.yaml
+        - /tmp/ezkf-input.yaml
+        - /tmp/ezkf-orch-status.txt
+        - /tmp/ezkfWorkloadDeploy.yaml
+        - /tmp/hostPoolConfig.yaml
+        - /tmp/mgmt-kubeconfig
+        - /tmp/prechecksStatus.txt
+        - /tmp/ua-prechecks.yaml

@@ -3,8 +3,8 @@ environment:
 config:
   hosts:
 {{ hosts }}
-  ssh_id: {{username}}
-  ssh_password: {{password}}
+  ssh_id: {{ sshusername }}
+  ssh_password: {{ sshpassword }}
   security: True
   enable_nfs: True
   nfs_type: "NFSv3"
@@ -13,7 +13,7 @@ config:
   custom_pbs_disable: false
   license_type: M5
   mep_version: {{ mapr_mep_version }}
-  cluster_name: {{ cluster_name }}
+  cluster_name: {{ clustername }}
   disks:
 {{ disks }}
   disk_format: true

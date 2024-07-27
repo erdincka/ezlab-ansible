@@ -11,4 +11,4 @@
 tf/.terraform.lock.hcl
 log/
 tf/terraform-plugin-proxmox.log
-.ezstatus
+.ez*

@@ -16,7 +16,7 @@ workload:
   clusterLabels: {}
   controlplane:
     enableHa: false
-    controlPlaneEndpoint: {{ controller }}
+    controlPlaneEndpoint: {{ master }}
   airgap:
     registryUrl: {{ registryUrl }}
     registryInsecure: {{ registryInsecure }}
