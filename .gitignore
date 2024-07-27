@@ -4,6 +4,7 @@
 **/.terraform
 **/.tfvars
 *.tfvars.json
+!lab.tfvars.json
 .vscode
 
 ./ezfab-release.tgz

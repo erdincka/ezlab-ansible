@@ -9,8 +9,7 @@
       cloud.terraform.terraform:
         project_path: '{{ playbook_dir }}/tf'
         complex_vars: yes
-        # Expect vars to be provided in environment or via cli
-        # variables_files: "../home-40.tfvars.json"
+        variables_files: "../lab.tfvars.json"
         state: absent
 
     - name: Delete artifacts

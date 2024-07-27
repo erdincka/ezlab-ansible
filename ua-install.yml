@@ -3,11 +3,10 @@
   hosts: localhost
   connection: local
 
-  # Expect vars to be provided in environment or via cli
-  # pre_tasks:
-  #   - name: include settings
-  #     ansible.builtin.include_vars: "./home-40.tfvars.json"
-  #     tags: ["always"]
+  pre_tasks:
+    - name: include settings
+      ansible.builtin.include_vars: "./lab.tfvars.json"
+      tags: ["always"]
 
   vars:
     # Generic params
