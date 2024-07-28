@@ -8,6 +8,7 @@
       ansible.builtin.include_vars: "./lab.tfvars.json"
       tags: ["always"]
 
+
   vars:
     # Generic params
     - sshusername: "{{ settings['username'] | default('admin') }}"
@@ -44,6 +45,17 @@
     - registryPassword_b64: "{{ settings['registryPassword'] | default('') | b64encode }}"
 
   tasks:
+    - name: write vars from env
+      copy: 
+        content: 
+          pve: "{{ pve }}"
+          template: "{{ template }}"
+          eznode: "{{ eznode }}"
+          settings: "{{ settings }}"
+          ezua: "{{ ezua }}"
+          ezdf: "{{ ezdf }}"
+        dest: ./lab.tfvars.json
+
     - name: Precheck Stanza
       ansible.builtin.template:
         src: ./templates/ua-precheck.yml.j2

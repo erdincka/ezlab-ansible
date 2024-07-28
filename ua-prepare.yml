@@ -4,6 +4,17 @@
   become: true
 
   tasks:
+    - name: write vars from env
+      copy: 
+        content: 
+          pve: "{{ pve }}"
+          template: "{{ template }}"
+          eznode: "{{ eznode }}"
+          settings: "{{ settings }}"
+          ezua: "{{ ezua }}"
+          ezdf: "{{ ezdf }}"
+        dest: ./lab.tfvars.json
+
     - name: Clear known hosts to avoid host conflicts
       ansible.builtin.known_hosts:
         name: "{{ ansible_host }}"
