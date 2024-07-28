@@ -1,0 +1,14 @@
+# Terraform
+**/terraform.tfstate*
+**/.terraform.tfstate.lock.info
+**/.terraform
+**/.tfvars
+*.tfvars.json
+.vscode
+
+./ezfab-release.tgz
+./ezfabricctl
+tf/.terraform.lock.hcl
+log/
+tf/terraform-plugin-proxmox.log
+.ez*
