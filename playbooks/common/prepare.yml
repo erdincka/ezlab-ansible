@@ -1,0 +1,42 @@
+---
+# Tasks common to all VMs
+
+- name: Populate service facts
+  ansible.builtin.service_facts:
+
+- name: Clear known hosts to avoid host conflicts
+  ansible.builtin.known_hosts:
+    name: "{{ ansible_host }}"
+    state: absent
+  delegate_to: 127.0.0.1
+  become: false
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ settings['timezone'] }}"
+
+- name: Enable Password Authentication
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication yes'
+    state: present
+    backup: true
+  notify:
+    - restart ssh
+
+- name: Enable Root Login
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?\s?PermitRootLogin.*$'
+    line: "PermitRootLogin yes"
+    state: present
+    backup: true
+  notify:
+    - restart ssh
+
+- name: Remove cloud-init Root login prevention
+  replace:
+    path: /root/.ssh/authorized_keys
+    regexp: '^.*?(ssh-rsa .*)$'
+    replace: '\1'

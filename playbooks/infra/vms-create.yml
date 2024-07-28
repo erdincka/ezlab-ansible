@@ -5,22 +5,11 @@
   gather_facts: false
 
   tasks:
-    - name: write vars from env
-      copy: 
-        content: 
-          pve: "{{ pve }}"
-          template: "{{ template }}"
-          eznode: "{{ eznode }}"
-          settings: "{{ settings }}"
-          ezua: "{{ ezua }}"
-          ezdf: "{{ ezdf }}"
-        dest: ./lab.tfvars.json
-
     - name: Create resources using terraform
       cloud.terraform.terraform:
-        project_path: '{{ playbook_dir }}/tf'
+        project_path: '../../tf'
         complex_vars: true
-        variables_files: "../lab.tfvars.json"
+        # variables_files: "/tmp/lab.tfvars.json"
         force_init: true
         state: present
       register: terraform_returns

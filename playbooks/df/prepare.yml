@@ -1,0 +1,7 @@
+---
+- name: Prepare DF nodes
+  hosts: datafabric
+  become: true
+
+- name: Ensure the nodes are prepared
+  ansible.builtin.import_playbook: ../common/prepare.yml

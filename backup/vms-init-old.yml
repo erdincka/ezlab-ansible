@@ -1,6 +1,6 @@
 ---
-- name: Prepare DF nodes
-  hosts: datafabric
+- name: Common configuration for VMs
+  hosts: all
   become: true
 
   tasks:
@@ -40,9 +40,3 @@
         path: /root/.ssh/authorized_keys
         regexp: '^.*?(ssh-rsa .*)$'
         replace: '\1'
-
-  handlers:
-  - name: restart ssh
-    service:
-      name: sshd
-      state: restarted

@@ -1,0 +1,12 @@
+---
+- name: Prepare DF nodes
+  hosts: datafabric
+  become: true
+
+- name: Ensure the nodes are prepared
+  ansible.builtin.import_playbook: vms-init.yml
+
+  tasks:
+  - name: Pass
+    ansible.builtin.debug:
+      msg: "{{ ansible_facts }}"

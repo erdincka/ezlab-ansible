@@ -9,6 +9,9 @@
       tags: ["always"]
 
 
+  roles:
+    - common
+
   vars:
     # Generic params
     - sshusername: "{{ settings['username'] | default('admin') }}"

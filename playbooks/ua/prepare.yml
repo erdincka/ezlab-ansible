@@ -1,0 +1,46 @@
+---
+- name: Prepare UA nodes
+  hosts: ua_controllers:ua_workers
+  become: true
+
+  handlers:
+    - name: Import handlers
+      import_tasks: ../common/handlers.yml
+
+  tasks:
+    - name: Ensure the nodes are prepared
+      ansible.builtin.import_tasks:
+          file: ../common/prepare.yml
+
+    - name: Install the required packages
+      ansible.builtin.package:
+        name:
+          - nfs-utils
+          - policycoreutils-python-utils
+          - conntrack-tools
+          - jq
+          - tar
+        state: present
+
+    - name: Ensure iscsi utils
+      ansible.builtin.shell: |
+        dnf --setopt=tsflags=noscripts install -y -q iscsi-initiator-utils
+        echo "InitiatorName=$(/sbin/iscsi-iname)" | sudo tee -a /etc/iscsi/initiatorname.iscsi
+
+    - name: Enable and start iscsid
+      ansible.builtin.service:
+        name: iscsid
+        enabled: true
+        state: started
+
+    - name: Add the ip_tables module
+      community.general.modprobe:
+        name: ip_tables
+        state: present
+
+    - name: Configure firewalld
+      ansible.builtin.shell: |
+        sed -i 's/FirewallBackend=.*/FirewallBackend=iptables/' /etc/firewalld/firewalld.conf
+        ethtool -K eth0 tx-checksum-ip-generic off
+      when: "'firewalld' in services"
+      notify: restart firewalld

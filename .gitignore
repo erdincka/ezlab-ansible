@@ -1,14 +1,15 @@
+.vscode
+
 # Terraform
 **/terraform.tfstate*
 **/.terraform.tfstate.lock.info
+**/.terraform.lock.hcl
 **/.terraform
-**/.tfvars
-*.tfvars.json
-.vscode
+**/*.tfvars
+**/*.tfvars.json
 
-./ezfab-release.tgz
-./ezfabricctl
-tf/.terraform.lock.hcl
+**/ezfab-release.tgz
+**/ezfabricctl*
 log/
-tf/terraform-plugin-proxmox.log
+**/*.log
 .ez*
