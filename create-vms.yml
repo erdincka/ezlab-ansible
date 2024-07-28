@@ -5,6 +5,9 @@
   gather_facts: false
 
   tasks:
+    - name: write vars from env
+      copy: content="{{ pve | ansible.builtin.combine(settings, ezua, ezdf) }}" dest=./lab.tfvars.json
+
     - name: Create resources using terraform
       cloud.terraform.terraform:
         project_path: '{{ playbook_dir }}/tf'
