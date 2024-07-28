@@ -7,7 +7,13 @@
   tasks:
     - name: write vars from env
       copy: 
-        content: "{{ 'pve': pve, 'settings': settings, 'ezua': ezua, 'ezdf': ezdf }}"
+        content: 
+          pve: "{{ pve }}"
+          template: "{{ template }}"
+          eznode: "{{ eznode }}"
+          settings: "{{ settings }}"
+          ezua: "{{ ezua }}"
+          ezdf: "{{ ezdf }}"
         dest: ./lab.tfvars.json
 
     - name: Create resources using terraform

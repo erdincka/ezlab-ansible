@@ -5,6 +5,17 @@
   gather_facts: no
 
   tasks:
+    - name: write vars from env
+      copy: 
+        content: 
+          pve: "{{ pve }}"
+          template: "{{ template }}"
+          eznode: "{{ eznode }}"
+          settings: "{{ settings }}"
+          ezua: "{{ ezua }}"
+          ezdf: "{{ ezdf }}"
+        dest: ./lab.tfvars.json
+
     - name: Destroy resources using terraform
       cloud.terraform.terraform:
         project_path: '{{ playbook_dir }}/tf'
