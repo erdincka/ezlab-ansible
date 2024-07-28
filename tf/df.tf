@@ -21,7 +21,6 @@ resource "proxmox_vm_qemu" "datafabric" {
   memory = var.eznode.datafabric.memGB * 1024
 
   ssh_user        = var.settings.username
-  ssh_private_key = var.settings.private_key
 
   os_type      = "cloud-init"
   ipconfig0    = var.template.startip == "dhcp" ? "ip=dhcp" : "ip=${cidrhost(var.settings.cidr, var.eznode.ua_control.count + var.eznode.ua_worker.count + var.template.startip + count.index)}/${split("/", var.settings.cidr)[1]},gw=${var.settings.gateway}"
@@ -81,7 +80,7 @@ resource "proxmox_vm_qemu" "datafabric" {
   connection {
     type        = "ssh"
     user        = self.ssh_user
-    private_key = self.ssh_private_key
+    private_key = data.tls_public_key.private_key_pem
     host        = self.ssh_host
   }
 

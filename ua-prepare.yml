@@ -24,7 +24,7 @@
 
     - name: Set timezone
       community.general.timezone:
-        name: "{{ settings | from_json | json_query('timezone') }}"
+        name: "{{ settings | json_query('timezone') }}"
 
     - name: Install the required packages
       ansible.builtin.package:

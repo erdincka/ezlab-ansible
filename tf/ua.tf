@@ -21,7 +21,6 @@ resource "proxmox_vm_qemu" "ua_controllers" {
   memory = var.eznode.ua_control.memGB * 1024
 
   ssh_user        = var.settings.username
-  ssh_private_key = var.settings.private_key
   ciuser          = var.settings.username
   cipassword      = var.settings.password
 
@@ -120,7 +119,6 @@ resource "proxmox_vm_qemu" "ua_workers" {
   memory = var.eznode.ua_worker.memGB * 1024
 
   ssh_user        = var.settings.username
-  ssh_private_key = var.settings.private_key
   ciuser          = var.settings.username
   cipassword      = var.settings.password
 

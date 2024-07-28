@@ -21,7 +21,7 @@ provider "proxmox" {
 }
 
 data "tls_public_key" "private_key_pem" {
-  private_key_openssh = var.settings.private_key
+  private_key_openssh = file(pathexpand("~/.ssh/id_rsa"))
 }
 
 resource "ansible_group" "ua_controllers" {
