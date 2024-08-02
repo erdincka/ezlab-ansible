@@ -15,14 +15,8 @@
           ezdf: "{{ ezdf }}"
         dest: "tf/terraform.tfvars.json"
 
-- name: Setup UA nodes
-  ansible.builtin.import_playbook: playbooks/ua/prepare.yml
+- name: Setup DF nodes
+  ansible.builtin.import_playbook: playbooks/df/prepare.yml
 
-- name: External DF
-  ansible.builtin.import_playbook: playbooks/ua/setup-df.yml
-
-- name: Installation
-  ansible.builtin.import_playbook: playbooks/ua/install.yml
-  vars:
-    ezfabrelease: ~/ezfab-release.tgz
-    ezfabricctl_cmd: /usr/local/bin/ezfabricctl
+- name: Install DF
+  ansible.builtin.import_playbook: playbooks/df/install.yml

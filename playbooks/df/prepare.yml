@@ -3,5 +3,11 @@
   hosts: datafabric
   become: true
 
-- name: Ensure the nodes are prepared
-  ansible.builtin.import_playbook: ../common/prepare.yml
+  handlers:
+    - name: Import handlers
+      import_tasks: ../common/handlers.yml
+
+  tasks:
+    - name: Ensure the nodes are prepared
+      ansible.builtin.import_tasks:
+          file: ../common/prepare.yml

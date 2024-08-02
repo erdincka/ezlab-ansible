@@ -6,24 +6,16 @@
 
 
   vars:
-    - mapr_core_version: 7.7.0
-    - mapr_mep_version: 9.2.2
+    - mapr_core_version: 7.8.0
+    - mapr_mep_version: 9.3.0
     - sshusername: "{{ settings['username'] | default('mapr') }}"
     - sshpassword: "{{ settings['password'] | default('mapr123') }}"
     - clustername: "{{ settings ['cluster_name'] | default('datafabric') }}"
-    - hosts: "{{ ip_list | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
+    - mapr_hosts: "{{ ip_list | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
     - disks: "{{ ezdf['disks'] | split(',') | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
 
 
   tasks:
-    - name: Get Settings
-      ansible.builtin.set_fact:
-        settings: "{{ settings | from_json }}"
-
-    - name: Get Datafabric Settings
-      ansible.builtin.set_fact:
-        ezdf: "{{ ezdf | from_json }}"
-
     - name: Set Repository
     # TODO: if no repo provided, default to MapR Repo
       ansible.builtin.debug:
@@ -47,7 +39,7 @@
 
     - name: Copy Stanza for Installation
       ansible.builtin.template:
-        src: ./templates/df-stanza.yml.j2
+        src: ../../templates/df-stanza.yml.j2
         dest: /tmp/mapr-stanza.yaml
 
     - name: Start installation using Stanza

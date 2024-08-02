@@ -5,14 +5,14 @@
 
   vars:
     # Generic params
-    - sshusername: "{{ settings['username'] | default('admin') }}"
-    - sshpassword_b64: "{{ settings['password'] | default('Admin123.') | b64encode }}"
+    - sshusername: "{{ settings['username'] | default('ezmeral') }}"
+    - sshpassword_b64: "{{ settings['password'] | default('Admin123.') | trim | b64encode }}"
 
-    - domain: "{{ settings['domain'] | default('') }}"
+    - domain: "{{ settings['domain'] | default('ezmeral.lab') }}"
 
     - http_proxy: "{{ settings['proxy'] | default('') }}"
     - https_proxy: "{{ settings['proxy'] | default('') }}"
-    - no_proxy: "10.96.0.0/12,10.224.0.0/16,10.43.0.0/16,192.168.0.0/16,.external.hpe.local,localhost,.cluster.local,.svc,.default.svc,127.0.0.1,169.254.169.254,{{ groups['all'] | join(',') }},.{{ settings['domain'] }}"
+    - no_proxy: "10.96.0.0/12,10.224.0.0/16,10.43.0.0/16,192.168.0.0/16,.external.hpe.local,localhost,.cluster.local,.svc,.default.svc,127.0.0.1,169.254.169.254,{{ groups['all'] | join(',') }},.{{ domain }}"
 
     # EZUA params
     - clustername: "{{ ezua['clustername'] | default('ezlab') }}"
@@ -21,7 +21,7 @@
     - workers: "{{ groups['ua_workers'] | map('extract', hostvars, ['ansible_host']) }}"
 
     - ezusername: "{{ ezua['username'] | default('admin') }}"
-    - ezpassword_b64: "{{ ezua['password'] | default('Admin123.') | b64encode }}"
+    - ezpassword_b64: "{{ ezua['password'] | default('Admin123.') | trim | b64encode }}"
 
     - auth_data:
         admin_user:
@@ -30,64 +30,71 @@
           username: "{{ ezusername }}"
           password: "{{ ezua['password'] | default('Admin123.') }}"
 
-    - authdata_b64: "{{ auth_data | from_yaml | b64encode }}"
+    - authdata_b64: "{{ auth_data | from_yaml | trim | b64encode }}"
 
     - registryUrl: "{{ ezua['registryUrl'] | default('') }}"
     - registryInsecure: "{{ ezua['registryInsecure'] | default('false') }}"
-    - registryCaFile: "{{ ezua['registryCaFile'] | default('') }}"
-    - registryUsername: "{{ ezua['registryUsername'] | default('') }}"
-    - registryPassword_b64: "{{ settings['registryPassword'] | default('') | b64encode }}"
+    - registryCaFile: "{{ ezua['registryCaFile'] }}"
+    - registryUsername: "{{ ezua['registryUsername'] }}"
+    - registryPassword_b64: "{{ settings['registryPassword'] | trim | b64encode }}"
 
   tasks:
-    - name: Precheck Stanza
+    - name: Copy stanza files
       ansible.builtin.template:
-        src: "../../templates/ua-precheck.yml.j2"
-        dest: /tmp/ua-prechecks.yaml
+        src: "../../templates/{{ item }}"
+        dest: "/tmp/{{ item | replace('.j2', '') }}"
+      with_items:
+        - ua-prechecks.yml.j2
+        - ua-ezkfInput.yml.j2
+        - ua-hostPoolConfig.yml.j2
+        - ua-clusterConfig.yml.j2
+        - ua-ezkfWorkloadDeploy.yml.j2
 
-    # {ezfabricctl_cmd} pc -i /tmp/ua-prechecks.yaml -s /tmp/prechecksStatus.txt
-    - name: Run prechecks
-      ansible.builtin.shell:
-        cmd: "ezfabricctl pc -i /tmp/ua-prechecks.yaml -s /tmp/prechecksStatus.txt"
-      async: 360
-      poll: 0
-      register: command_run
+    # - name: Precheck Stanza
+    #   ansible.builtin.template:
+    #     src: "../../templates/ua-precheck.yml.j2"
+    #     dest: /tmp/ua-prechecks.yaml
 
-    - name: Check precheck run
-      ansible.builtin.async_status:
-        jid: "{{ command_run.ansible_job_id }}"
-      register: job_result
-      until: job_result.finished
-      retries: 36
-      delay: 10
+    # - name: EzkfInput Stanza
+    #   ansible.builtin.template:
+    #     src: "../../templates/ua-ezkfInput.yml.j2"
+    #     dest: /tmp/ezkf-input.yaml
 
-    - name: EzkfInput Stanza
-      ansible.builtin.template:
-        src: "../../templates/ua-ezkfInput.yml.j2"
-        dest: /tmp/ezkf-input.yaml
+    # - name: HostPoolConfig Stanza
+    #   ansible.builtin.template:
+    #     src: "../../templates/ua-hostPoolConfig.yml.j2"
+    #     dest: /tmp/hostPoolConfig.yaml
 
-# {ezfabricctl_cmd} o init -p ./ezfab-release.tgz -i /tmp/ezkf-input.yaml -s /tmp/ezkf-orch-status.txt --save-kubeconfig /tmp/mgmt-kubeconfig
+    # - name: ClusterConfig Stanza
+    #   ansible.builtin.template:
+    #     src: "../../templates/ua-clusterConfig.yml.j2"
+    #     dest: /tmp/clusterConfig.yaml
 
-    - name: HostPoolConfig Stanza
-      ansible.builtin.template:
-        src: "../../templates/ua-hostPoolConfig.yml.j2"
-        dest: /tmp/hostPoolConfig.yaml
+    # - name: WorkloadDeploy Stanza
+    #   ansible.builtin.template:
+    #     src: "../../templates/ua-ezkfWorkloadDeploy.yml.j2"
+    #     dest: /tmp/ezkfWorkloadDeploy.yaml
 
-# {ezfabricctl_cmd} ph i -i /tmp/hostPoolConfig.yaml -c /tmp/mgmt-kubeconfig -s /tmp/hostPoolConfigStatus.txt
+    # - name: Build ezkf clusters
+    #   ansible.builtin.shell:
+    #     cmd: |
+    #       set -euo pipefail
+    #       {{ ezfabricctl_cmd }} pc -i /tmp/ua-prechecks.yaml -s /tmp/prechecksStatus.txt
+    #       {{ ezfabricctl_cmd }} o init -p {{ ezfabrelease }} -i /tmp/ezkf-input.yaml -s /tmp/ezkf-orch-status.txt --save-kubeconfig /tmp/mgmt-kubeconfig
+    #       {{ ezfabricctl_cmd }} ph i -i /tmp/hostPoolConfig.yaml -c /tmp/mgmt-kubeconfig -s /tmp/hostPoolConfigStatus.txt
+    #       {{ ezfabricctl_cmd }} w i -i /tmp/clusterConfig.yaml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt
+    #       {{ ezfabricctl_cmd }} w g k -n {{ clustername }} -i /tmp/clusterConfig.yaml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt --save-kubeconfig /tmp/workload-kubeconfig
+    #       kubectl --kubeconfig=/tmp/workload-kubeconfig apply -f /tmp/ezkfWorkloadDeploy.yaml
 
-    - name: ClusterConfig Stanza
-      ansible.builtin.template:
-        src: "../../templates/ua-clusterConfig.yml.j2"
-        dest: /tmp/clusterConfig.yaml
-
-# {ezfabricctl_cmd} w i -i /tmp/clusterConfig.yaml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt
-
-### GET CLUSTER KUBECONFIG
-# ezfabricctl_cmd} w g k -n {'clustername'} -i /tmp/clusterConfig.yaml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt --save-kubeconfig /tmp/workload-kubeconfig
-
-
-    - name: WorkloadDeploy Stanza
-      ansible.builtin.template:
-        src: "../../templates/ua-ezkfWorkloadDeploy.yml.j2"
-        dest: /tmp/ezkfWorkloadDeploy.yaml
-
-# {kubectl_cmd} --kubeconfig=/tmp/workload-kubeconfig apply -f /tmp/ezkfWorkloadDeploy.yaml
+    - name: Write deployment script
+      ansible.builtin.copy:
+        content: |
+          set -euo pipefail
+          {{ ezfabricctl_cmd }} pc -i /tmp/ua-prechecks.yml -s /tmp/prechecksStatus.txt
+          {{ ezfabricctl_cmd }} o init -p {{ ezfabrelease }} -i /tmp/ua-ezkfInput.yml -s /tmp/ezkf-orch-status.txt --save-kubeconfig /tmp/mgmt-kubeconfig
+          {{ ezfabricctl_cmd }} ph i -i /tmp/ua-hostPoolConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/hostPoolConfigStatus.txt
+          {{ ezfabricctl_cmd }} w i -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt
+          {{ ezfabricctl_cmd }} w g k -n {{ clustername }} -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt --save-kubeconfig /tmp/workload-kubeconfig
+          kubectl --kubeconfig=/tmp/workload-kubeconfig apply -f /tmp/ua-ezkfWorkloadDeploy.yml
+        dest: /tmp/ua-install.sh
+        mode: 0x755

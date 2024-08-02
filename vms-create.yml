@@ -7,7 +7,7 @@
   tasks:
     - name: Create resources using terraform
       cloud.terraform.terraform:
-        project_path: '../../tf'
+        project_path: './tf'
         complex_vars: true
         # variables_files: "/tmp/lab.tfvars.json"
         force_init: true

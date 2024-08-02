@@ -7,7 +7,7 @@
   tasks:
     - name: Destroy resources using terraform
       cloud.terraform.terraform:
-        project_path: '../../tf'
+        project_path: './tf'
         complex_vars: yes
         state: absent
 
