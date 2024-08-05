@@ -1,42 +1,68 @@
 ---
 - name: Prepare external Data Fabric
   hosts: datafabric[0]
-  
+  become: true
+
   vars:
-    - sshusername: "{{ settings['username'] | default('mapr') }}"
-    - sshpassword: "{{ settings['password'] | default('mapr123') }}"
-    - ezua_user: ezua
-    - mount_path: /ezua
-    - pwd_alias: "{{ lookup('password', 'length=12 chars=ascii_letters') }}"
-    - ezdf: "{{ ezdf | from_json }}"
+    sshusername: "{{ settings['username'] }}"
+    sshpassword: "{{ settings['password'] }}"
+    ezua_user: ezua
+    mount_path: /ezua
+    pwd_alias: "{{ lookup('ansible.builtin.password', '../../ezua.password', length=12) }}"
+    ezdf: "{{ ezdf | from_json }}"
 
   tasks:
     - name: Ensure user
       ansible.builtin.user:
         name: "{{ ezua_user }}"
-        password: "{{ pwd_alias }}"
+        password: "{{ pwd_alias | password_hash }}"
         group: "{{ ezua_user }}"
         home: "/home/{{ ezua_user }}"
         shell: /bin/bash
-    
+
     - name: Setup cluster credentials
       ansible.builtin.shell:
         cmd: |
-          echo "{{ pwd_alias }}" | maprlogin password -user "{{ ezua_user }}"
-          echo "{{ mapr_password }}" | maprlogin password -user "{{ mapr_user }}"
-          maprcli acl edit -type cluster -user "{{ ezua_user }}":login,cv
-          maprcli volume create -name ezua-base-volume-"{{ ezua_user }}" -path "{{ mount_path }}" -type rw -json -rootdiruser "{{ ezua_user }}" -rootdirgroup "{{ ezua_user }}" -createparent 1
-          maprlogin generateticket -type tenant -user "{{ ezua_user }}" -out /tmp/maprtenantticket-"{{ ezua_user }}"
+          set -euo pipefail
+          echo "{{ ezdf['password'] }}" | maprlogin password -user {{ ezdf['user'] }}
+          maprcli acl edit -type cluster -user {{ ezua_user }}:login,cv
+          maprcli volume create -name ezua-base-volume-{{ ezua_user }} -path {{ mount_path }} -type rw -json \
+          -rootdiruser {{ ezua_user }} -rootdirgroup {{ ezua_user }} -createparent 1 || true
+          maprlogin generateticket -type tenant -user {{ ezua_user }} -out /tmp/maprtenantticket-{{ ezua_user }}
+          echo "{{ pwd_alias }}" | maprlogin password -user {{ ezua_user }}
+        creates: "/tmp/maprtenantticket-{{ ezua_user }}"
 
     - name: Get CA
       ansible.builtin.fetch:
         src: /opt/mapr/conf/ca/chain-ca.pem
         dest: ./df_files
-      
-    - name: Get CLDB nodes
-      ansible.builtin.shell:
-        cmd: "maprcli node list -columns hn -filter svc==cldb"
-      register: cldb_cmd
 
-    - ansible.builtin.set_fact:
-        cldb_hosts: "{{ cldb_cmd.stdout }}"
+    - name: Get CLDB nodes
+      ansible.builtin.command: "/opt/mapr/bin/maprcli node list -columns hn -filter svc==cldb -json"
+      register: cldb_cmd
+      changed_when: cldb_cmd.rc != 0
+
+    - name: Register CLDB hosts
+      ansible.builtin.set_fact:
+        cldb_hosts: "{{ cldb_cmd.stdout | from_json | community.general.json_query('data[*].hostname') }}"
+
+    - name: Get tenantticket
+      ansible.builtin.fetch:
+        src: "/tmp/maprtenantticket-{{ ezua_user }}"
+        dest: ./df_files
+
+    - name: Create S3 access key
+      ansible.builtin.shell:
+        cmd: maprcli s3keys generate -domainname primary -accountname default -username {{ ezua_user }} -json > /tmp/{{ ezua_user }}_s3.keys
+        creates: "/tmp/{{ ezua_user }}_s3.keys"
+      register: s3_access_key_cmd
+
+    - name: Get S3 access key
+      ansible.builtin.slurp:
+        src: "/tmp/{{ ezua_user }}_s3.keys"
+      register: access_key_file
+
+    - name: Register S3 keys
+      ansible.builtin.set_fact:
+        s3_access_key: "{{ (access_key_file['content'] | b64decode | from_json)['data'][0]['accesskey'] }}"
+        s3_secret_key: "{{ (access_key_file['content'] | b64decode | from_json)['data'][0]['secretkey'] }}"

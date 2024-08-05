@@ -8,12 +8,11 @@
   vars:
     - mapr_core_version: 7.8.0
     - mapr_mep_version: 9.3.0
-    - sshusername: "{{ settings['username'] | default('mapr') }}"
-    - sshpassword: "{{ settings['password'] | default('mapr123') }}"
-    - clustername: "{{ settings ['cluster_name'] | default('datafabric') }}"
+    - sshusername: "{{ ezdf['user'] | default('mapr') }}"
+    - sshpassword: "{{ ezdf['password'] | default('mapr123') }}"
+    - clustername: "{{ ezdf['cluster_name'] | default('datafabric') }}"
     - mapr_hosts: "{{ ip_list | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
     - disks: "{{ ezdf['disks'] | split(',') | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
-
 
   tasks:
     - name: Set Repository

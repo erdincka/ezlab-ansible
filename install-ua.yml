@@ -1,18 +1,19 @@
 ---
 
-- hosts: localhost
+- name: Install Unified Analytics
+  hosts: localhost
   gather_facts: false
 
   tasks:
-    - name: write vars from env
-      copy: 
-        content: 
-          pve: "{{ pve }}"
-          template: "{{ template }}"
-          eznode: "{{ eznode }}"
-          settings: "{{ settings }}"
-          ezua: "{{ ezua }}"
-          ezdf: "{{ ezdf }}"
+    - name: Write vars from env
+      ansible.builtin.copy:
+        content:
+          pve: {{ pve }}
+          template: {{ template }}
+          eznode: {{ eznode }}
+          settings: {{ settings }}
+          ezua: {{ ezua }}
+          ezdf: {{ ezdf }}
         dest: "tf/terraform.tfvars.json"
 
 - name: Setup UA nodes

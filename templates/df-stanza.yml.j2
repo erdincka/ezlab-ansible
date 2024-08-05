@@ -24,8 +24,9 @@ config:
   metrics_ui_admin_password: mapr123
   enable_encryption_at_rest: True
   services:
-    template-05-converged:
-    mapr-opentsdb:
+    template-60-maprxd:
+    # template-05-converged:
+    # mapr-opentsdb:
     mapr-ezotelcol:
     mapr-collectd:
     mapr-data-access-gateway:
@@ -34,3 +35,4 @@ config:
         name: hive
         user: hive
         password: mapr123
+        
