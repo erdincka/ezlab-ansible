@@ -1,14 +1,5 @@
 .vscode
 
-# Terraform
-**/terraform.tfstate*
-**/.terraform.tfstate.lock.info
-**/.terraform.lock.hcl
-**/.terraform
-**/*.tfvars
-**/*.tfvars.json
-*.json
-
 **/ezfab-release.tgz
 **/ezfabricctl*
 log/
@@ -17,3 +8,5 @@ log/
 playbooks/ua/df_files/vm46/opt/mapr/conf/.DS_Store
 playbooks/ua/df_files/*
 ua-templates/
+inventory.yml
+*.json
