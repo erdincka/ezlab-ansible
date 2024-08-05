@@ -4,6 +4,3 @@ log/
 **/*.log
 .ez*
 ua-templates/
-*.json
-*License-*.txt
-inventory-*.ini
