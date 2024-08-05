@@ -36,7 +36,7 @@
     - restart ssh
 
 - name: Remove cloud-init Root login prevention
-  replace:
+  ansible.builtin.replace:
     path: /root/.ssh/authorized_keys
     regexp: '^.*?(ssh-rsa .*)$'
     replace: '\1'

@@ -7,7 +7,7 @@
   tasks:
     - name: Write vars from env
       ansible.builtin.copy:
-        content:
+        content: |
           pve: {{ pve }}
           template: {{ template }}
           eznode: {{ eznode }}
@@ -15,6 +15,7 @@
           ezua: {{ ezua }}
           ezdf: {{ ezdf }}
         dest: "tf/terraform.tfvars.json"
+        mode: "0o644"
 
 - name: Setup UA nodes
   ansible.builtin.import_playbook: playbooks/ua/prepare.yml

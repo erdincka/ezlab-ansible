@@ -14,8 +14,9 @@
         state: present
       register: terraform_returns
 
-    - name: clean up known hosts
+    - name: Clean up known hosts
       ansible.builtin.known_hosts:
         name: "{{ item.value }}"
         state: absent
       with_dict: "{{ (terraform_returns.outputs.df_nodes | ansible.builtin.combine(terraform_returns.outputs.ua_nodes, list_merge='append', recursive=true)).value }}"
+      ignore_errors: true
