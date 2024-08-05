@@ -1,0 +1,23 @@
+---
+- name: Deploy VMs with terraform
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Create resources using terraform
+      cloud.terraform.terraform:
+        project_path: './tf'
+        complex_vars: true
+        # variables_files: "/tmp/lab.tfvars.json"
+        force_init: true
+        state: present
+      register: terraform_returns
+
+    - name: Clean up known hosts
+      ansible.builtin.known_hosts:
+        name: "{{ item.value }}"
+        state: absent
+      with_dict: "{{ (terraform_returns.outputs.df_nodes | ansible.builtin.combine(terraform_returns.outputs.ua_nodes, list_merge='append', recursive=true)).value }}"
+      ignore_errors: true
+

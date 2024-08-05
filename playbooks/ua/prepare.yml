@@ -5,8 +5,8 @@
 
   handlers:
     - name: Import handlers
-      import_tasks: ../common/handlers.yml
-  
+      ansible.builtin.import_tasks: ../common/handlers.yml
+
   vars_prompt:
     - name: new_root_password_encrypted
       prompt: enter the root password
@@ -18,7 +18,7 @@
   tasks:
     - name: Ensure the nodes are prepared
       ansible.builtin.import_tasks:
-          file: ../common/prepare.yml
+        file: ../common/prepare.yml
 
     - name: Set root password
       ansible.builtin.user:
@@ -38,6 +38,7 @@
 
     - name: Ensure iscsi utils
       ansible.builtin.shell: |
+        set -euo pipefail
         dnf --setopt=tsflags=noscripts install -y -q iscsi-initiator-utils
         echo "InitiatorName=$(/sbin/iscsi-iname)" | sudo tee -a /etc/iscsi/initiatorname.iscsi
 
@@ -58,4 +59,3 @@
         ethtool -K eth0 tx-checksum-ip-generic off
       when: "'firewalld' in services"
       notify: restart firewalld
-      

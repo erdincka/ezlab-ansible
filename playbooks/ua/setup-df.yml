@@ -8,7 +8,7 @@
     sshpassword: "{{ settings['password'] }}"
     ezua_user: ezua
     mount_path: /ezua
-    pwd_alias: "{{ lookup('ansible.builtin.password', '../../ezua.password', length=12) }}"
+    pwd_alias: "{{ lookup('ansible.builtin.password', './df_files/ezua.password', length=12) }}"
     ezdf: "{{ ezdf | from_json }}"
 
   tasks:
@@ -46,23 +46,27 @@
       ansible.builtin.set_fact:
         cldb_hosts: "{{ cldb_cmd.stdout | from_json | community.general.json_query('data[*].hostname') }}"
 
-    - name: Get tenantticket
-      ansible.builtin.fetch:
-        src: "/tmp/maprtenantticket-{{ ezua_user }}"
-        dest: ./df_files
-
-    - name: Create S3 access key
+    - name: Create S3 keys
       ansible.builtin.shell:
         cmd: maprcli s3keys generate -domainname primary -accountname default -username {{ ezua_user }} -json > /tmp/{{ ezua_user }}_s3.keys
-        creates: "/tmp/{{ ezua_user }}_s3.keys"
+        creates: "/tmp/s3_keys-{{ ezua_user }}"
       register: s3_access_key_cmd
 
-    - name: Get S3 access key
+    - name: Get S3 keys
       ansible.builtin.slurp:
-        src: "/tmp/{{ ezua_user }}_s3.keys"
+        src: "/tmp/s3_keys-{{ ezua_user }}"
       register: access_key_file
 
     - name: Register S3 keys
       ansible.builtin.set_fact:
         s3_access_key: "{{ (access_key_file['content'] | b64decode | from_json)['data'][0]['accesskey'] }}"
         s3_secret_key: "{{ (access_key_file['content'] | b64decode | from_json)['data'][0]['secretkey'] }}"
+
+    - name: Get files
+      ansible.builtin.fetch:
+        src: "{{ item }}"
+        dest: ./df_files
+        mode: "0o600"
+      with_items:
+        - "/tmp/maprtenantticket-{{ ezua_user }}"
+        - "/tmp/s3_keys-{{ ezua_user }}"
