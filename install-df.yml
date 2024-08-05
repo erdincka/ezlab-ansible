@@ -1,20 +1,9 @@
 ---
 
-- hosts: localhost
-  gather_facts: false
+hosts: localhost
+gather_facts: false
 
-  tasks:
-    - name: write vars from env
-      copy: 
-        content: 
-          pve: "{{ pve }}"
-          template: "{{ template }}"
-          eznode: "{{ eznode }}"
-          settings: "{{ settings }}"
-          ezua: "{{ ezua }}"
-          ezdf: "{{ ezdf }}"
-        dest: "tf/terraform.tfvars.json"
-
+tasks:
 - name: Setup DF nodes
   ansible.builtin.import_playbook: playbooks/df/prepare.yml
 

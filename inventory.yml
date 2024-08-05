@@ -1,3 +1,21 @@
 ---
-plugin: cloud.terraform.terraform_provider
-project_path: ./tf
+
+datafabric:
+  hosts:
+    vm46:
+
+ua-controllers:
+  hosts:
+    vm41:
+    vm42:
+
+ua-workers:
+  hosts:
+    vm43:
+    vm44:
+    vm45:
+
+ua:
+  children:
+    ua-controllers:
+    ua-workers:
