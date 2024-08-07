@@ -23,7 +23,7 @@
     state: present
     backup: true
   notify:
-    - restart ssh
+    - Restart ssh
 
 - name: Enable Root Login
   ansible.builtin.lineinfile:
@@ -33,7 +33,7 @@
     state: present
     backup: true
   notify:
-    - restart ssh
+    - Restart ssh
 
 - name: Remove cloud-init Root login prevention
   ansible.builtin.replace:

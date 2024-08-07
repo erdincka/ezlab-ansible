@@ -12,10 +12,15 @@
     ezdf: "{{ ezdf | from_json }}"
 
   tasks:
+    - name: Ensure group
+      ansible.builtin.group:
+        name: "{{ ezua_user }}"
+        state: present
+
     - name: Ensure user
       ansible.builtin.user:
         name: "{{ ezua_user }}"
-        password: "{{ pwd_alias | password_hash }}"
+        password: "{{ pwd_alias | password_hash('sha512') }}"
         group: "{{ ezua_user }}"
         home: "/home/{{ ezua_user }}"
         shell: /bin/bash
@@ -48,7 +53,7 @@
 
     - name: Create S3 keys
       ansible.builtin.shell:
-        cmd: maprcli s3keys generate -domainname primary -accountname default -username {{ ezua_user }} -json > /tmp/{{ ezua_user }}_s3.keys
+        cmd: "maprcli s3keys generate -domainname primary -accountname default -username {{ ezua_user }} -json > /tmp/s3_keys-{{ ezua_user }}"
         creates: "/tmp/s3_keys-{{ ezua_user }}"
       register: s3_access_key_cmd
 

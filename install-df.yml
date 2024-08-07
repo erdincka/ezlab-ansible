@@ -1,9 +1,11 @@
 ---
 
-hosts: localhost
-gather_facts: false
+- name: Install Unified Analytics
+  hosts: localhost
+  gather_facts: false
 
-tasks:
+  tasks:
+
 - name: Setup DF nodes
   ansible.builtin.import_playbook: playbooks/df/prepare.yml
 

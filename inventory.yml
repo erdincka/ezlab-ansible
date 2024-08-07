@@ -2,20 +2,20 @@
 
 datafabric:
   hosts:
-    vm46:
+    vm1:
 
-ua-controllers:
+ua_controllers:
   hosts:
-    vm41:
-    vm42:
+    vm2:
+    vm3:
 
-ua-workers:
+ua_workers:
   hosts:
-    vm43:
-    vm44:
-    vm45:
+    vm4:
+    vm5:
+    vm6:
 
 ua:
   children:
-    ua-controllers:
-    ua-workers:
+    ua_controllers:
+    ua_workers:
