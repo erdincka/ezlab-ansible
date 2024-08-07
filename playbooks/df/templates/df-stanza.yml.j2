@@ -7,9 +7,9 @@ config:
   ssh_password: {{ sshpassword }}
   security: True
   enable_nfs: True
-  nfs_type: "NFSv3"
+  nfs_type: "NFSv4"
   cluster_admin_id: mapr
-  cluster_admin_password: mapr123
+  cluster_admin_password: {{ ezdf.password }}
   custom_pbs_disable: false
   license_type: M5
   mep_version: {{ mapr_mep_version }}
@@ -26,13 +26,12 @@ config:
   services:
     template-60-maprxd:
     # template-05-converged:
-    # mapr-opentsdb:
-    mapr-ezotelcol:
-    mapr-collectd:
-    mapr-data-access-gateway:
-    mapr-hivemetastore:
-      database:
-        name: hive
-        user: hive
-        password: mapr123
-        
+    # mapr-ezotelcol:
+    # mapr-opentsdb: # required for collectd
+    # mapr-collectd:
+    # mapr-data-access-gateway:
+    # mapr-hivemetastore:
+    #   database:
+    #     name: hive
+    #     user: hive
+    #     password: mapr123

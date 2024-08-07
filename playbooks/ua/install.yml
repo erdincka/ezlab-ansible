@@ -1,4 +1,8 @@
 ---
+
+- name: Configure External Data Fabric
+  ansible.builtin.import_playbook: setup-df.yml
+
 - name: Install UA
   hosts: localhost
   connection: local
@@ -42,7 +46,7 @@
   tasks:
     - name: Copy stanza files
       ansible.builtin.template:
-        src: "../../templates/{{ item }}"
+        src: "{{ item }}"
         dest: "/tmp/{{ item | replace('.j2', '') }}"
         mode: "644"
       with_items:

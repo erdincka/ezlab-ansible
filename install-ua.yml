@@ -1,18 +1,9 @@
 ---
 
-- name: Install Unified Analytics
-  hosts: localhost
-  gather_facts: false
+- name: Install DF as it is required
+  ansible.builtin.import_playbook: playbooks/df/install.yml
 
-  tasks:
-
-- name: Setup UA nodes
-  ansible.builtin.import_playbook: playbooks/ua/prepare.yml
-
-- name: External DF
-  ansible.builtin.import_playbook: playbooks/ua/setup-df.yml
-
-- name: Installation
+- name: Install UA
   ansible.builtin.import_playbook: playbooks/ua/install.yml
   vars:
     ezfabrelease: ~/ezfab-release.tgz

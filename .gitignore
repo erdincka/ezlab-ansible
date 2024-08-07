@@ -4,3 +4,6 @@ log/
 **/*.log
 .ez*
 ua-templates/
+inventory.yml
+*.json
+inventory-*.yml

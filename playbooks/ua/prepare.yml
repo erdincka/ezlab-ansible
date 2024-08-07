@@ -58,4 +58,4 @@
         sed -i 's/FirewallBackend=.*/FirewallBackend=iptables/' /etc/firewalld/firewalld.conf
         ethtool -K eth0 tx-checksum-ip-generic off
       when: "'firewalld' in services"
-      notify: restart firewalld
+      notify: Restart firewalld
