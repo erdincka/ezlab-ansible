@@ -40,3 +40,18 @@
     path: /root/.ssh/authorized_keys
     regexp: '^.*?(ssh-rsa .*)$'
     replace: '\1'
+
+- name: Remove IPv6 resolution from /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "{{ item }}"
+    state: absent
+  with_items:
+    - "^::1"
+    - "{{ hostvars[inventory_hostname]['ansible_facts']['fqdn'] | default('locahost') }}"
+
+- name: Remove IPv6 resolution
+  ansible.builtin.replace:
+    path: /etc/nsswitch.conf
+    regexp: "myhostname"
+    replace: ""

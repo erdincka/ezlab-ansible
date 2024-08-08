@@ -10,10 +10,9 @@
   vars:
     mapr_core_version: 7.8.0
     mapr_mep_version: 9.3.0
-    sshusername: "{{ ezdf['user'] | default('mapr') }}"
-    sshpassword: "{{ ezdf['password'] | default('mapr123') }}"
-    clustername: "{{ ezdf['cluster_name'] | default('datafabric') }}"
-    mapr_hosts: "{{ ip_list | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
+    sshusername: "{{ settings['username'] | default('ezmeral') }}"
+    sshpassword: "{{ settings['password'] | default('Admin123.') }}"
+    mapr_hostnames: "{{ mapr_hosts | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
     disks: "{{ ezdf['disks'] | split(',') | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
 
   tasks:
@@ -32,12 +31,12 @@
       ansible.builtin.command:
         cmd: "/tmp/mapr-setup.sh -y -r {{ ezdf.repo | regex_replace('\\/$', '') }}"
         creates: "/opt/mapr/installer/bin/mapr-installer-cli"
+      register: installer_setup
 
     - name: Collect IPs from group
       ansible.builtin.set_fact:
-      # {{ groups['datafabric'] | map('extract', hostvars, ['ansible_host']) | list }}
         # Assuming inventory to use IP addresses
-        ip_list: "{{ groups['datafabric'] }}"
+        mapr_hosts: "{{ groups['datafabric'] | map('extract', hostvars, ['ansible_fqdn']) | list }}"
 
     - name: Copy Stanza for Installation
       ansible.builtin.template:
@@ -45,13 +44,21 @@
         dest: /tmp/mapr-stanza.yaml
         mode: "0o644"
 
-    - name: Start installation using Stanza
-      ansible.builtin.command:
-        cmd: "/opt/mapr/installer/bin/mapr-installer-cli install -nvp -t /tmp/mapr-stanza.yaml -u mapr:mapr@127.0.0.1:9443"
-        creates: "/opt/mapr/conf/mapr-clusters.conf"
+    - name: Wait for installer to be ready
+      wait_for:
+        port: 9443
+        host: 127.0.0.1
+        connect_timeout: 3
+        delay: 10
+        timeout: 60
 
-    - name: Ensure admin password
-      ansible.builtin.user:
-        name: "{{ ezdf.user }}"
-        password: "{{ ezdf.password | password_hash('sha512') }}"
+    # - name: Start installation using Stanza
+    #   ansible.builtin.command:
+    #     cmd: "/opt/mapr/installer/bin/mapr-installer-cli install -nvpf -t /tmp/mapr-stanza.yaml -u mapr:mapr@127.0.0.1:9443"
+    #     creates: "/opt/mapr/conf/mapr-clusters.conf"
+
+    # - name: Ensure admin password
+    #   ansible.builtin.user:
+    #     name: "{{ ezdf.user }}"
+    #     password: "{{ ezdf.password | password_hash('sha512') }}"
        
