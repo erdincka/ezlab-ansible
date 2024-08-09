@@ -1,7 +1,10 @@
 ---
 
-- name: Configure External Data Fabric
-  ansible.builtin.import_playbook: setup-df.yml
+# - name: Prepare UA nodes
+#   ansible.builtin.import_playbook: prepare.yml
+
+# - name: Configure External Data Fabric
+#   ansible.builtin.import_playbook: setup-df.yml
 
 - name: Install UA
   hosts: localhost
@@ -16,14 +19,14 @@
 
     http_proxy: "{{ settings['proxy'] | default('') }}"
     https_proxy: "{{ settings['proxy'] | default('') }}"
-    host_ips: "{{ groups['all'] | map('extract', hostvars, ['ansible_host']) | list }}"
+    host_ips: "{{ groups['ua'] }}"
     no_proxy: "10.96.0.0/12,10.224.0.0/16,10.43.0.0/16,192.168.0.0/16,.external.hpe.local,localhost,.cluster.local,.svc,.default.svc,127.0.0.1,169.254.169.254,{{ host_ips | join(',') }},.{{ domain }}"
 
     # EZUA params
     clustername: "{{ ezua['clustername'] | default('ezlab') }}"
-    orchestrator: "{{ hostvars[groups['ua_controllers'][0]]['ansible_host'] }}"
-    master: "{{ hostvars[groups['ua_controllers'][1]]['ansible_host'] }}"
-    workers: "{{ groups['ua_workers'] | map('extract', hostvars, ['ansible_host']) }}"
+    orchestrator: "{{ groups['ua_controllers'][0] }}"
+    master: "{{ groups['ua_controllers'][1] }}"
+    workers: "{{ groups['ua_workers'] }}"
 
     ezusername: "{{ ezua['username'] | default('admin') }}"
     ezpassword_b64: "{{ ezua['password'] | default('Admin123.') | trim | b64encode }}"
@@ -60,11 +63,11 @@
       ansible.builtin.copy:
         content: |
           set -euo pipefail
-          {{ ezfabricctl_cmd }} pc -i /tmp/ua-prechecks.yml -s /tmp/prechecksStatus.txt
-          {{ ezfabricctl_cmd }} o init -p {{ ezfabrelease }} -i /tmp/ua-ezkfInput.yml -s /tmp/ezkf-orch-status.txt --save-kubeconfig /tmp/mgmt-kubeconfig
-          {{ ezfabricctl_cmd }} ph i -i /tmp/ua-hostPoolConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/hostPoolConfigStatus.txt
-          {{ ezfabricctl_cmd }} w i -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt
-          {{ ezfabricctl_cmd }} w g k -n {{ clustername }} -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt --save-kubeconfig /tmp/workload-kubeconfig
+          {{ ezfabricctl }} pc -i /tmp/ua-prechecks.yml -s /tmp/prechecksStatus.txt
+          {{ ezfabricctl }} o init -p {{ ezfabrelease }} -i /tmp/ua-ezkfInput.yml -s /tmp/ezkf-orch-status.txt --save-kubeconfig /tmp/mgmt-kubeconfig
+          {{ ezfabricctl }} ph i -i /tmp/ua-hostPoolConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/hostPoolConfigStatus.txt
+          {{ ezfabricctl }} w i -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt
+          {{ ezfabricctl }} w g k -n {{ clustername }} -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt --save-kubeconfig /tmp/workload-kubeconfig
           kubectl --kubeconfig=/tmp/workload-kubeconfig apply -f /tmp/ua-ezkfWorkloadDeploy.yml
         dest: /tmp/ua-install.sh
         mode: "755"

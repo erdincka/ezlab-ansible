@@ -52,13 +52,13 @@
         delay: 10
         timeout: 60
 
-    # - name: Start installation using Stanza
-    #   ansible.builtin.command:
-    #     cmd: "/opt/mapr/installer/bin/mapr-installer-cli install -nvpf -t /tmp/mapr-stanza.yaml -u mapr:mapr@127.0.0.1:9443"
-    #     creates: "/opt/mapr/conf/mapr-clusters.conf"
+    - name: Start installation using Stanza
+      ansible.builtin.command:
+        cmd: "/opt/mapr/installer/bin/mapr-installer-cli install -nvpf -t /tmp/mapr-stanza.yaml -u mapr:mapr@127.0.0.1:9443"
+        creates: "/opt/mapr/conf/mapr-clusters.conf"
 
-    # - name: Ensure admin password
-    #   ansible.builtin.user:
-    #     name: "{{ ezdf.user }}"
-    #     password: "{{ ezdf.password | password_hash('sha512') }}"
+    - name: Ensure admin password
+      ansible.builtin.user:
+        name: "{{ ezdf.user }}"
+        password: "{{ ezdf.password | password_hash('sha512') }}"
        

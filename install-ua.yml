@@ -7,4 +7,4 @@
   ansible.builtin.import_playbook: playbooks/ua/install.yml
   vars:
     ezfabrelease: ~/ezfab-release.tgz
-    ezfabricctl_cmd: /usr/local/bin/ezfabricctl
+    ezfabricctl: /usr/local/bin/ezfabricctl
