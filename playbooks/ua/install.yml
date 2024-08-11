@@ -1,10 +1,10 @@
 ---
 
-# - name: Prepare UA nodes
-#   ansible.builtin.import_playbook: prepare.yml
+- name: Prepare UA nodes
+  ansible.builtin.import_playbook: prepare.yml
 
-# - name: Configure External Data Fabric
-#   ansible.builtin.import_playbook: setup-df.yml
+- name: Configure External Data Fabric
+  ansible.builtin.import_playbook: setup-df.yml
 
 - name: Install UA
   hosts: localhost
@@ -46,28 +46,107 @@
     registryUsername: "{{ ezua['registryUsername'] | default('') }}"
     registryPassword_b64: "{{ settings['registryPassword'] | default('') | trim | b64encode }}"
 
-  tasks:
-    - name: Copy stanza files
-      ansible.builtin.template:
-        src: "{{ item }}"
-        dest: "/tmp/{{ item | replace('.j2', '') }}"
-        mode: "644"
-      with_items:
-        - ua-prechecks.yml.j2
-        - ua-ezkfInput.yml.j2
-        - ua-hostPoolConfig.yml.j2
-        - ua-clusterConfig.yml.j2
-        - ua-ezkfWorkloadDeploy.yml.j2
+    # DF settings
+    ezua_df_username: "{{ lookup('ansible.builtin.file', './df_files/username') }}"
+    ezua_df_password: "{{ lookup('ansible.builtin.file', './df_files/password') }}"
+    ezua_mount_path: "{{ lookup('ansible.builtin.file', './df_files/mount_path') }}"
+    tenant_ticket: "{{ lookup('ansible.builtin.file', './df_files/maprtenantticket') }}"
+    cldb_hosts: "{{ lookup('ansible.builtin.file', './df_files/cldb_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
+    rest_hosts: "{{ lookup('ansible.builtin.file', './df_files/rest_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
+    s3_hosts: "{{ lookup('ansible.builtin.file', './df_files/s3_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
+    s3_access_key: "{{ lookup('ansible.builtin.file', './df_files/s3_keys.json') | from_json | community.general.json_query('data[*].accesskey') | first | default('minioadmin') }}"
+    s3_secret_key: "{{ lookup('ansible.builtin.file', './df_files/s3_keys.json') | from_json | community.general.json_query('data[*].secretkey') | first | default('minioadmin') }}"
 
-    - name: Write deployment script
-      ansible.builtin.copy:
-        content: |
-          set -euo pipefail
-          {{ ezfabricctl }} pc -i /tmp/ua-prechecks.yml -s /tmp/prechecksStatus.txt
-          {{ ezfabricctl }} o init -p {{ ezfabrelease }} -i /tmp/ua-ezkfInput.yml -s /tmp/ezkf-orch-status.txt --save-kubeconfig /tmp/mgmt-kubeconfig
-          {{ ezfabricctl }} ph i -i /tmp/ua-hostPoolConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/hostPoolConfigStatus.txt
-          {{ ezfabricctl }} w i -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt
-          {{ ezfabricctl }} w g k -n {{ clustername }} -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt --save-kubeconfig /tmp/workload-kubeconfig
-          kubectl --kubeconfig=/tmp/workload-kubeconfig apply -f /tmp/ua-ezkfWorkloadDeploy.yml
-        dest: /tmp/ua-install.sh
-        mode: "755"
+  tasks:
+    - name: EZUA installer data
+      ansible.builtin.debug:
+        msg: |
+          Go to EZUA Installer Web interface and start filling these details:
+
+          --- Page 1
+
+          Username: {{ sshusername }}
+          Credentials: Password
+          Password: {{ settings['password'] | default('Admin123.') }}
+
+          Control Plane Hosts: {{ groups['ua_controllers'] | join(',') }}
+          Worker Hosts: {{ groups['ua_workers'] | join(',') }}
+
+          --- Page 2
+
+          Installation Name: {{ clustername }}
+          Domain Name: {{ clustername ~ '.' ~ domain }}
+          vCPU: 96
+          High Availability: Not checked
+          Use GPU: Not checked
+          Air Gap Environment: Not checked
+
+          Registry URL: {{ registryUrl }}
+          Registry Username: {{ registryUsername }}
+          Registry Password: {{ settings['registryPassword'] | default('') }}
+          Registry Insecure: {{ registryInsecure }}
+
+          Add certificates as needed!!!
+
+          HTTP Proxy: {{ http_proxy }}
+          HTTPS Proxy: {{ https_proxy }}
+          No Proxy: {{ no_proxy }}
+
+          --- Page 3
+
+          Use Internal LDAP Server: check
+
+          Username: admin
+          Full Name: Ez Admin
+          Email: ezadmin@{{ domain }}
+          Password: {{ ezua['password'] | default('Admin123.') }}
+
+          --- Page 4
+
+          Check as needed
+
+          --- Page 5
+
+          Data Volumes
+
+          CLDB Hosts: {{ cldb_hosts | join(':7222') }}
+          Rest Servers: {{ rest_hosts | join('8443') }}
+          Tenant Ticket: {{ tenant_ticket }}
+          Username: {{ ezua_df_username }}
+          Password: {{ ezua_df_password }}
+          CA Certificate: {{  playbook_dir ~ '/df_files/chain-ca.pem' }}
+          Mount Prefix: {{ ezua_mount_path }}
+
+          Object Store
+
+          Object Source: Ezmeral Data Fabric S3
+          End Point: {{ ('https://' ~ s3_hosts | first) ~ ':9000' }}
+          Access Key: {{ s3_access_key }}
+          Secret Key: {{ s3_secret_key }}
+          Root Certificate: {{ playbook_dir ~ '/df_files/chain-ca.pem' }}
+
+
+    # - name: Copy stanza files
+    #   ansible.builtin.template:
+    #     src: "{{ item }}"
+    #     dest: "/tmp/{{ item | replace('.j2', '') }}"
+    #     mode: "644"
+    #   with_items:
+    #     - ua-prechecks.yml.j2
+    #     - ua-ezkfInput.yml.j2
+    #     - ua-hostPoolConfig.yml.j2
+    #     - ua-clusterConfig.yml.j2
+    #     - ua-ezkfWorkloadDeploy.yml.j2
+
+    # - name: Write deployment script
+    #   ansible.builtin.copy:
+    #     content: |
+    #       set -euo pipefail
+    #       {{ ezfabricctl }} pc -i /tmp/ua-prechecks.yml -s /tmp/prechecksStatus.txt
+    #       {{ ezfabricctl }} o init -p {{ ezfabrelease }} -i /tmp/ua-ezkfInput.yml -s /tmp/ezkf-orch-status.txt --save-kubeconfig /tmp/mgmt-kubeconfig
+    #       {{ ezfabricctl }} ph i -i /tmp/ua-hostPoolConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/hostPoolConfigStatus.txt
+    #       {{ ezfabricctl }} w i -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt
+    #       {{ ezfabricctl }} w g k -n {{ clustername }} -i /tmp/ua-clusterConfig.yml -c /tmp/mgmt-kubeconfig -s /tmp/clusterConfigStatus.txt --save-kubeconfig /tmp/workload-kubeconfig
+    #       kubectl --kubeconfig=/tmp/workload-kubeconfig apply -f /tmp/ua-ezkfWorkloadDeploy.yml
+    #     dest: /tmp/ua-install.sh
+    #     mode: "755"

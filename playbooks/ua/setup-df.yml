@@ -6,72 +6,76 @@
   vars:
     sshusername: "{{ settings['username'] }}"
     sshpassword: "{{ settings['password'] }}"
-    ezua_user: ezua
-    mount_path: /ezua
     pwd_alias: "{{ lookup('ansible.builtin.password', './df_files/ezua.password', length=12) }}"
-    ezdf: "{{ ezdf | from_json }}"
+    ezua_df_username: ezua
+    ezua_mount_path: /ezua
 
   tasks:
     - name: Ensure group
       ansible.builtin.group:
-        name: "{{ ezua_user }}"
+        name: "{{ ezua_df_username }}"
         state: present
 
     - name: Ensure user
       ansible.builtin.user:
-        name: "{{ ezua_user }}"
+        name: "{{ ezua_df_username }}"
         password: "{{ pwd_alias | password_hash('sha512') }}"
-        group: "{{ ezua_user }}"
-        home: "/home/{{ ezua_user }}"
+        group: "{{ ezua_df_username }}"
+        home: "/home/{{ ezua_df_username }}"
         shell: /bin/bash
 
-    - name: Setup cluster credentials
+    - name: Setup DF credentials
       ansible.builtin.shell:
         cmd: |
           set -euo pipefail
           echo "{{ ezdf['password'] }}" | maprlogin password -user {{ ezdf['user'] }}
-          maprcli acl edit -type cluster -user {{ ezua_user }}:login,cv
-          maprcli volume create -name ezua-base-volume-{{ ezua_user }} -path {{ mount_path }} -type rw -json \
-          -rootdiruser {{ ezua_user }} -rootdirgroup {{ ezua_user }} -createparent 1 || true
-          maprlogin generateticket -type tenant -user {{ ezua_user }} -out /tmp/maprtenantticket-{{ ezua_user }}
-          echo "{{ pwd_alias }}" | maprlogin password -user {{ ezua_user }}
-        creates: "/tmp/maprtenantticket-{{ ezua_user }}"
-
-    - name: Get CA
-      ansible.builtin.fetch:
-        src: /opt/mapr/conf/ca/chain-ca.pem
-        dest: ./df_files
+          maprcli acl edit -type cluster -user {{ ezua_df_username }}:login,cv
+          maprcli volume create -name ezua-base-volume -path {{ ezua_mount_path }} -type rw -json \
+            -rootdiruser {{ ezua_df_username }} -rootdirgroup {{ ezua_df_username }} -createparent 1 || true
+          maprlogin generateticket -type tenant -user {{ ezua_df_username }} -out /tmp/maprtenantticket
+          # echo "{{ pwd_alias }}" | maprlogin password -user {{ ezua_df_username }}
+        creates: "/tmp/maprtenantticket"
 
     - name: Get CLDB nodes
-      ansible.builtin.command: "/opt/mapr/bin/maprcli node list -columns hn -filter svc==cldb -json"
-      register: cldb_cmd
-      changed_when: cldb_cmd.rc != 0
+      ansible.builtin.shell:
+        cmd: "/opt/mapr/bin/maprcli node list -columns hn -filter svc==cldb -json > /tmp/cldb_nodes.json"
+        creates: "/tmp/cldb_nodes.json"
 
-    - name: Register CLDB hosts
-      ansible.builtin.set_fact:
-        cldb_hosts: "{{ cldb_cmd.stdout | from_json | community.general.json_query('data[*].hostname') }}"
+    - name: Get REST nodes
+      ansible.builtin.shell:
+        cmd: "/opt/mapr/bin/maprcli node list -columns hn -filter svc==apiserver -json > /tmp/rest_nodes.json"
+        creates: "/tmp/rest_nodes.json"
+
+    - name: Get S3 nodes
+      ansible.builtin.shell:
+        cmd: "/opt/mapr/bin/maprcli node list -columns hn -filter svc==s3server -json > /tmp/s3_nodes.json"
+        creates: "/tmp/s3_nodes.json"
 
     - name: Create S3 keys
       ansible.builtin.shell:
-        cmd: "maprcli s3keys generate -domainname primary -accountname default -username {{ ezua_user }} -json > /tmp/s3_keys-{{ ezua_user }}"
-        creates: "/tmp/s3_keys-{{ ezua_user }}"
-      register: s3_access_key_cmd
+        cmd: "maprcli s3keys generate -domainname primary -accountname default -username {{ ezua_df_username }} -json > /tmp/s3_keys.json"
+        creates: "/tmp/s3_keys.json"
 
-    - name: Get S3 keys
-      ansible.builtin.slurp:
-        src: "/tmp/s3_keys-{{ ezua_user }}"
-      register: access_key_file
+    - name: Save settings for DF
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "./df_files/{{ item.file }}"
+        mode: "0o644"
+      delegate_to: localhost
+      with_items:
+        - { file: 'username', content: "{{ ezua_df_username }}" }
+        - { file: 'password', content: "{{ pwd_alias }}" }
+        - { file: 'mount_path', content: "{{ ezua_mount_path }}" }
 
-    - name: Register S3 keys
-      ansible.builtin.set_fact:
-        s3_access_key: "{{ (access_key_file['content'] | b64decode | from_json)['data'][0]['accesskey'] }}"
-        s3_secret_key: "{{ (access_key_file['content'] | b64decode | from_json)['data'][0]['secretkey'] }}"
-
-    - name: Get files
+    - name: Get DF files
       ansible.builtin.fetch:
         src: "{{ item }}"
-        dest: ./df_files
-        mode: "0o600"
+        dest: ./df_files/
+        flat: true
       with_items:
-        - "/tmp/maprtenantticket-{{ ezua_user }}"
-        - "/tmp/s3_keys-{{ ezua_user }}"
+        - "/opt/mapr/conf/ca/chain-ca.pem"
+        - "/tmp/maprtenantticket"
+        - "/tmp/cldb_nodes.json"
+        - "/tmp/rest_nodes.json"
+        - "/tmp/s3_nodes.json"
+        - "/tmp/s3_keys.json"

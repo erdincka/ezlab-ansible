@@ -45,7 +45,7 @@
         mode: "0o644"
 
     - name: Wait for installer to be ready
-      wait_for:
+      ansible.builtin.wait_for:
         port: 9443
         host: 127.0.0.1
         connect_timeout: 3
@@ -61,4 +61,18 @@
       ansible.builtin.user:
         name: "{{ ezdf.user }}"
         password: "{{ ezdf.password | password_hash('sha512') }}"
-       
+
+    - name: Copy license file
+      ansible.builtin.copy:
+        src: ../../LatestDemoLicense-M7.txt
+        dest: /tmp/LatestDemoLicense-M7.txt
+        mode: '0o400'
+        owner: root
+      register: license_uploaded
+
+    - name: Install license
+      ansible.builtin.command: "/opt/mapr/installer/bin/mapr-installer-cli license -n -l /tmp/LatestDemoLicense-M7.txt -u https://{{ ezdf.user }}:{{ ezdf.password }}@localhost:9443 -o config.ssh_id={{ ezdf.user }} -o config.ssh_password={{ ezdf.password }}"
+      register: license_cmd
+      changed_when: license_cmd.rc == 0
+      ignore_errors: true
+      when: license_uploaded is changed
