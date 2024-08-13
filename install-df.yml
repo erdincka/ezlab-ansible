@@ -1,6 +1,6 @@
 ---
 
-- name: Install Unified Analytics
+- name: Install Data Fabric
   hosts: localhost
   gather_facts: false
 
