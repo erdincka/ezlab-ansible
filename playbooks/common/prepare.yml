@@ -40,6 +40,7 @@
     path: /root/.ssh/authorized_keys
     regexp: '^.*?(ssh-rsa .*)$'
     replace: '\1'
+  ignore_errors: true
 
 - name: Remove IPv6 resolution from /etc/hosts
   ansible.builtin.lineinfile:
