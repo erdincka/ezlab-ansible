@@ -71,7 +71,7 @@
       register: license_uploaded
 
     - name: Install license
-      ansible.builtin.command: "/opt/mapr/installer/bin/mapr-installer-cli license -n -l /tmp/LatestDemoLicense-M7.txt -u https://{{ ezdf.user }}:{{ ezdf.password }}@localhost:9443 -o config.ssh_id={{ ezdf.user }} -o config.ssh_password={{ ezdf.password }}"
+      ansible.builtin.command: "/opt/mapr/installer/bin/mapr-installer-cli license -n -l /tmp/LatestDemoLicense-M7.txt -u https://{{ ezdf.user }}:{{ ezdf.password }}@localhost:9443 -o config.ssh_id={{ sshusername }} -o config.ssh_password={{ sshpassword }}"
       register: license_cmd
       changed_when: license_cmd.rc == 0
       ignore_errors: true
