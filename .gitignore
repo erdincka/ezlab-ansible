@@ -7,8 +7,6 @@ log/
 .ez*
 playbooks/ua/df_files/*
 ua-templates/
-inventory.yml
 *.json
-inventory-*.yml
 inventory-*.ini
 *License*.txt
