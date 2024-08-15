@@ -28,15 +28,15 @@
     master: "{{ groups['ua_controllers'][1] }}"
     workers: "{{ groups['ua_workers'] }}"
 
-    ezusername: "{{ ezua['username'] | default('admin') }}"
-    ezpassword_b64: "{{ ezua['password'] | default('Admin123.') | trim | b64encode }}"
+    ezusername: "{{ ezua['username'] }}"
+    ezpassword_b64: "{{ ezua['password'] | trim | b64encode }}"
 
     auth_data:
       admin_user:
         fullname: Ezmeral Admin
         email: "ezadmin@{{ settings['domain'] }}"
         username: "{{ ezusername }}"
-        password: "{{ ezua['password'] | default('Admin123.') }}"
+        password: "{{ ezua['password'] }}"
 
     authdata_b64: "{{ auth_data | from_yaml | trim | b64encode }}"
 
@@ -47,21 +47,21 @@
     registryPassword_b64: "{{ settings['registryPassword'] | default('') | trim | b64encode }}"
 
     # DF settings
-    ezua_df_username: "{{ lookup('ansible.builtin.file', './df_files/username') }}"
-    ezua_df_password: "{{ lookup('ansible.builtin.file', './df_files/password') }}"
-    ezua_mount_path: "{{ lookup('ansible.builtin.file', './df_files/mount_path') }}"
-    tenant_ticket: "{{ lookup('ansible.builtin.file', './df_files/maprtenantticket') }}"
-    cldb_hosts: "{{ lookup('ansible.builtin.file', './df_files/cldb_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
-    rest_hosts: "{{ lookup('ansible.builtin.file', './df_files/rest_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
-    s3_hosts: "{{ lookup('ansible.builtin.file', './df_files/s3_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
-    s3_access_key: "{{ lookup('ansible.builtin.file', './df_files/s3_keys.json') | from_json | community.general.json_query('data[*].accesskey') | first | default('minioadmin') }}"
-    s3_secret_key: "{{ lookup('ansible.builtin.file', './df_files/s3_keys.json') | from_json | community.general.json_query('data[*].secretkey') | first | default('minioadmin') }}"
+    df_password: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/password') }}"
+    tenant_ticket: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/maprtenantticket') }}"
+    cldb_hosts: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/cldb_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
+    rest_hosts: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/rest_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
+    s3_hosts: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/s3_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
+    s3_access_key: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/s3_keys.json') | from_json | community.general.json_query('data[*].accesskey') | first }}"
+    s3_secret_key: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/s3_keys.json') | from_json | community.general.json_query('data[*].secretkey') | first }}"
 
   tasks:
     - name: EZUA installer data
-      ansible.builtin.debug:
-        msg: |
-          Go to EZUA Installer Web interface and start filling these details:
+      ansible.builtin.copy:
+        dest: "/tmp/ezlab/ua-install-settings.txt"
+        mode: "0o644"
+        content: |
+          EZUA Installer UI inputs:
 
           --- Page 1
 
@@ -112,10 +112,10 @@
           CLDB Hosts: {{ cldb_hosts | join(':7222') }}
           Rest Servers: {{ rest_hosts | join('8443') }}
           Tenant Ticket: {{ tenant_ticket }}
-          Username: {{ ezua_df_username }}
-          Password: {{ ezua_df_password }}
+          Username: {{ ezua['df_username'] }}
+          Password: {{ df_password }}
           CA Certificate: {{  playbook_dir ~ '/df_files/chain-ca.pem' }}
-          Mount Prefix: {{ ezua_mount_path }}
+          Mount Prefix: {{ ezua['df_mount_path'] }}
 
           Object Store
 
