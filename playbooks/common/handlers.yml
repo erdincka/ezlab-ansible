@@ -10,3 +10,12 @@
   ansible.builtin.service:
     name: firewalld
     state: restarted
+
+- name: Install license
+  ansible.builtin.command: "/opt/mapr/installer/bin/mapr-installer-cli license -n -l /tmp/LatestDemoLicense-M7.txt -u https://{{ df_username }}:{{ df_password }}@localhost:9443 -o config.ssh_id={{ ansible_user }} -o config.ssh_password={{ ansible_ssh_pass }}"
+  register: license_cmd
+  changed_when: license_cmd.rc == 0
+  ignore_errors: true
+
+- name: Update dnf cache
+  ansible.builtin.command: "dnf makecache"

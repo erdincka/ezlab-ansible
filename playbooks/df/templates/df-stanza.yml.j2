@@ -1,27 +1,27 @@
 environment:
-  mapr_core_version: {{ mapr_core_version }}
+  mapr_core_version: {{ df_core_version }}
 config:
   hosts:
 {{ mapr_hostnames }}
-  ssh_id: {{ sshusername }}
-  ssh_password: {{ sshpassword }}
+  ssh_id: {{ ansible_user }}
+  ssh_password: {{ ansible_ssh_pass }}
   security: True
   enable_nfs: True
-  nfs_type: "NFSv4"
-  cluster_admin_id: {{ ezdf.user }}
-  cluster_admin_password: {{ ezdf.password }}
+  nfs_type: "NFSv3"
+  cluster_admin_id: {{ df_username }}
+  cluster_admin_password: {{ df_password }}
   custom_pbs_disable: false
   license_type: M5
-  mep_version: {{ mapr_mep_version }}
-  cluster_name: {{ ezdf['cluster_name'] | default('datafabric') }}
+  mep_version: {{ df_mep_version }}
+  cluster_name: {{ df_clustername | default('datafabric') }}
   disks:
-{{ disks }}
+{{ mapr_disks }}
   disk_format: true
   disk_stripe: 1
   db_admin_user: root
-  db_admin_password: {{ ezdf.password }}
-  log_admin_password: {{ ezdf.password }}
-  metrics_ui_admin_password: {{ ezdf.password }}
+  db_admin_password: {{ df_password }}
+  log_admin_password: {{ df_password }}
+  metrics_ui_admin_password: {{ df_password }}
   enable_encryption_at_rest: True
   services:
     template-60-maprxd:

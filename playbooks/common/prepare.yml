@@ -4,7 +4,7 @@
 - name: Populate service facts
   ansible.builtin.service_facts:
 
-- name: Clear known hosts to avoid host conflicts
+- name: Clear known hosts from this host
   ansible.builtin.known_hosts:
     name: "{{ ansible_host }}"
     state: absent
@@ -13,7 +13,7 @@
 
 - name: Set timezone
   community.general.timezone:
-    name: "{{ settings['timezone'] }}"
+    name: "{{ timezone }}"
 
 - name: Enable Password Authentication
   ansible.builtin.lineinfile:
@@ -37,10 +37,16 @@
 
 - name: Remove cloud-init Root login prevention
   ansible.builtin.replace:
-    path: /root/.ssh/authorized_keys
+    path: "{{ item }}"
     regexp: '^.*?(ssh-rsa .*)$'
     replace: '\1'
-  ignore_errors: true
+  loop: "{{ query('fileglob', '/root/.ssh/authorized_keys') }}"
+
+- name: Configure user for passwordless sudo
+  community.general.sudoers:
+    name: "{{ ansible_user }}-passwordless"
+    user: "{{ ansible_user }}"
+    commands: ALL
 
 - name: Remove IPv6 resolution from /etc/hosts
   ansible.builtin.lineinfile:
@@ -49,10 +55,42 @@
     state: absent
   with_items:
     - "^::1"
-    - "{{ hostvars[inventory_hostname]['ansible_facts']['fqdn'] | default('locahost') }}"
+    - "{{ hostvars[inventory_hostname]['ansible_facts']['fqdn'] }}"
 
 - name: Remove IPv6 resolution
   ansible.builtin.replace:
     path: /etc/nsswitch.conf
     regexp: "myhostname"
     replace: ""
+
+- name: Set local yum repositories
+  ansible.builtin.yum_repository:
+    name: "local-{{ item }}"
+    description: "Local {{ item }} repository"
+    baseurl: "{{ yumrepo | regex_replace('\\/$', '') ~ '/' ~ item ~ '/x86_64/os' }}"
+    file: local
+    gpgcheck: false
+    enabled: true
+    priority: 1
+  when: yumrepo is defined and yumrepo | length > 0
+  loop:
+    - BaseOS
+    - AppStream
+    - HighAvailability
+    - PowerTools
+    - extras
+    - plus
+  notify: Update dnf cache
+
+- name: Disable internet repos - RHEL
+  ansible.builtin.lineinfile:
+    regexp: ^enabled=0
+    line: enabled=1
+    path: "{{ item }}"
+  loop:
+    - /etc/yum/pluginconf.d/product-id.conf
+    - /etc/yum/pluginconf.d/subscription-manager.conf
+
+- name: Set Locale to en_US.UTF-8
+  ansible.builtin.command:
+    cmd: localectl set-locale LANG=en_US.UTF-8

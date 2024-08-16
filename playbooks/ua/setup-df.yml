@@ -4,20 +4,21 @@
   become: true
 
   vars:
-    pwd_alias: "{{ lookup('ansible.builtin.password', '/tmp/ezlab/password', length=12) }}"
+    pwd_filepath: "/tmp/ezlab/{{ hostvars[groups['ua'][0]].ua_clustername }}/ua_df_password"
+    pwd_alias: "{{ lookup('ansible.builtin.password', pwd_filepath, length=12) }}"
 
   tasks:
     - name: Ensure group
       ansible.builtin.group:
-        name: "{{ ezua['df_username']  }}"
+        name: "{{ hostvars[groups['ua'][0]].ua_df_username }}"
         state: present
 
     - name: Ensure user
       ansible.builtin.user:
-        name: "{{ ezua['df_username']  }}"
+        name: "{{ hostvars[groups['ua'][0]].ua_df_username }}"
         password: "{{ pwd_alias | password_hash('sha512') }}"
-        group: "{{ ezua['df_username']  }}"
-        home: "/home/{{ ezua['df_username']  }}"
+        group: "{{ hostvars[groups['ua'][0]].ua_df_username }}"
+        home: "/home/{{ hostvars[groups['ua'][0]].ua_df_username }}"
         shell: /bin/bash
 
 
@@ -26,7 +27,8 @@
   become: true
 
   vars:
-    pwd_alias: "{{ lookup('ansible.builtin.password', '/tmp/ezlab/password', length=12) }}"
+    pwd_filepath: "/tmp/ezlab/{{ hostvars[groups['ua'][0]].ua_clustername }}/ua_df_password"
+    pwd_alias: "{{ lookup('ansible.builtin.password', pwd_filepath, length=12) }}"
 
   tasks:
     # TODO: should run separate tasks and handle failure properly
@@ -34,13 +36,22 @@
       ansible.builtin.shell:
         cmd: |
           set -euo pipefail
-          echo "{{ ezdf['password'] }}" | maprlogin password -user {{ ezdf['user'] }}
-          maprcli acl edit -type cluster -user {{ ezua['df_username']  }}:login,cv
+          # login as cluster admin to run these commands
+          echo "{{ hostvars[groups['datafabric'][0]].df_password }}" | maprlogin password -user {{ hostvars[groups['datafabric'][0]].df_username }}
+
+          # allow user to login
+          maprcli acl edit -type cluster -user {{ hostvars[groups['ua'][0]].ua_df_username }}:login,cv
+
           # ignore volume create errors, since 'volume exists' also returns error
-          maprcli volume create -name ezua-base-volume -path {{ ezua['df_mount_path'] }} -type rw -json \
-            -rootdiruser {{ ezua['df_username']  }} -rootdirgroup {{ ezua['df_username']  }} -createparent 1 || true
-          [ -f /tmp/maprtenantticket ] || maprlogin generateticket -type tenant -user {{ ezua['df_username']  }} -out /tmp/maprtenantticket
-          # echo "{{ pwd_alias }}" | maprlogin password -user {{ ezua['df_username']  }}
+          maprcli volume create -name ezua-base-volume -path {{ hostvars[groups['ua'][0]].ua_df_mount_path }} -type rw -json \
+            -rootdiruser {{ hostvars[groups['ua'][0]].ua_df_username }} -rootdirgroup {{ hostvars[groups['ua'][0]].ua_df_username }} -createparent 1 || true
+
+          # generate tenantticket
+          [ -f /tmp/maprtenantticket ] || maprlogin generateticket -type tenant -user {{ hostvars[groups['ua'][0]].ua_df_username }} -out /tmp/maprtenantticket
+
+          # test new user login
+          # echo "{{ pwd_alias }}" | maprlogin password -user {{ hostvars[groups['ua'][0]].ua_df_username }}
+
         creates: "/tmp/maprtenantticket"
 
     # TODO: check for empty result
@@ -64,7 +75,7 @@
     # TODO: check key generation failures
     - name: Create S3 keys
       ansible.builtin.shell:
-        cmd: "maprcli s3keys generate -domainname primary -accountname default -username {{ ezua['df_username'] }} -json > /tmp/s3_keys.json"
+        cmd: "maprcli s3keys generate -domainname primary -accountname default -username {{ hostvars[groups['ua'][0]].ua_df_username }} -json > /tmp/s3_keys.json"
         creates: "/tmp/s3_keys.json"
 
     - name: Save settings for DF
@@ -79,7 +90,7 @@
     - name: Get DF files
       ansible.builtin.fetch:
         src: "{{ item }}"
-        dest: "/tmp/ezlab/"
+        dest: "/tmp/ezlab/{{ hostvars[groups['ua'][0]].ua_clustername }}/"
         flat: true
       with_items:
         - "/opt/mapr/conf/ca/chain-ca.pem"

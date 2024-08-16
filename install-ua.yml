@@ -5,4 +5,3 @@
 
 - name: Install UA
   ansible.builtin.import_playbook: playbooks/ua/install.yml
-
