@@ -7,35 +7,25 @@
   hosts: datafabric[0]
   become: true
 
-  vars:
-    mapr_core_version: 7.8.0
-    mapr_mep_version: 9.3.0
-    sshusername: "{{ settings['username'] | default('ezmeral') }}"
-    sshpassword: "{{ settings['password'] | default('Admin123.') }}"
-    mapr_hostnames: "{{ mapr_hosts | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
-    disks: "{{ ezdf['disks'] | split(',') | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
+  handlers:
+    - name: Import handlers
+      ansible.builtin.import_tasks: ../common/handlers.yml
 
   tasks:
-    - name: Set Repository
-    # TODO: if no repo provided, default to MapR Repo
-      ansible.builtin.debug:
-        msg: "{{ ezdf.repo }}"
-
     - name: Get installer script
       ansible.builtin.get_url:
-        url: "{{ ezdf.repo }}/installer/redhat/mapr-setup.sh"
+        url: "{{ df_repo | default('https://package.ezmeral.hpe.com/releases') }}/installer/redhat/mapr-setup.sh"
         dest: /tmp/mapr-setup.sh
-        mode: '0755'
+        mode: '0o755'
 
     - name: Run Installer
       ansible.builtin.command:
-        cmd: "/tmp/mapr-setup.sh -y -r {{ ezdf.repo | regex_replace('\\/$', '') }}"
+        cmd: "/tmp/mapr-setup.sh -y -r {{ df_repo }}"
         creates: "/opt/mapr/installer/bin/mapr-installer-cli"
       register: installer_setup
 
-    - name: Collect IPs from group
+    - name: Get host FQDNs
       ansible.builtin.set_fact:
-        # Assuming inventory to use IP addresses
         mapr_hosts: "{{ groups['datafabric'] | map('extract', hostvars, ['ansible_fqdn']) | list }}"
 
     - name: Copy Stanza for Installation
@@ -43,24 +33,27 @@
         src: df-stanza.yml.j2
         dest: /tmp/mapr-stanza.yaml
         mode: "0o644"
+      vars:
+        mapr_hostnames: "{{ mapr_hosts | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
+        mapr_disks: "{{ df_disks | split(',') | to_nice_yaml(indent=4) | trim | indent(4, first=true) }}"
 
     - name: Wait for installer to be ready
       ansible.builtin.wait_for:
         port: 9443
         host: 127.0.0.1
         connect_timeout: 3
-        delay: 10
-        timeout: 60
+        delay: 5
+        timeout: 120
 
-    - name: Start installation using Stanza
+    - name: Start installation using stanza
       ansible.builtin.command:
         cmd: "/opt/mapr/installer/bin/mapr-installer-cli install -nvpf -t /tmp/mapr-stanza.yaml -u mapr:mapr@127.0.0.1:9443"
         creates: "/opt/mapr/conf/mapr-clusters.conf"
 
     - name: Ensure admin password
       ansible.builtin.user:
-        name: "{{ ezdf.user }}"
-        password: "{{ ezdf.password | password_hash('sha512') }}"
+        name: "{{ df_username }}"
+        password: "{{ df_password | password_hash('sha512') }}"
 
     - name: Copy license file
       ansible.builtin.copy:
@@ -68,11 +61,4 @@
         dest: /tmp/LatestDemoLicense-M7.txt
         mode: '0o400'
         owner: root
-      register: license_uploaded
-
-    - name: Install license
-      ansible.builtin.command: "/opt/mapr/installer/bin/mapr-installer-cli license -n -l /tmp/LatestDemoLicense-M7.txt -u https://{{ ezdf.user }}:{{ ezdf.password }}@localhost:9443 -o config.ssh_id={{ sshusername }} -o config.ssh_password={{ sshpassword }}"
-      register: license_cmd
-      changed_when: license_cmd.rc == 0
-      ignore_errors: true
-      when: license_uploaded is changed
+      notify: Install license

@@ -4,100 +4,86 @@ Ezmeral Data Fabric is pre-requisites for Ezmeral Unified Analytics as of v1.5.
 
 So we are installing Data Fabric first, and then Unified Analytics.
 
-We assume you have created your nodes/VMs that has SSH password or public key authentication enabled. If you haven't enabled passwordless sudo, please run the ansible command with -K option so it will ask for sudo password.
+First, create inventory.ini file using to this template, changing as needed.
 
-You will need to define your infrastructure details in a JSON file, let's call it `demo.json` but you can name it anything.
+Use IP addresses (makes scripting easier)
 
-`demo.json` has the following schema:
-
-```json
-
-{
-    "settings": {
-        "cidr": "<ip address>/24",
-        "gateway": "<ip address>",
-        "nameserver": "<ip address>",
-        "domain": "domain.tld",
-        "proxy": "http://<ip address>:<port>/",
-        "username": "<user with sudo rights to target nodes/VMs>",
-        "password": "<password>",
-        "timezone": "Europe/London", // or anything else from TZ database
-        "yumrepo": "<full URL to the RPM repository containing the folder 8/>",
-        "epelrepo": "<full URL to the EPEL repository containing repodata/repomd.xml file"
-    },
-    "ezua": {
-        "username": "admin", // default admin user
-        "password": "Admin123.", // change as you wish
-        "clustername": "ua", // name of the cluster which will be accessible at https://home.<clustername>.<domain>
-        "registryUrl": "<registry project path>/", // should end with /
-        "registryInsecure": true,
-        "registryCaFile": "",
-        "registryUsername": "",
-        "registryPassword": ""
-    },
-    "ezdf": {
-        "cluster_name": "df",
-        "user": "mapr",
-        "password": "mapr123", // change as you like
-        "disks": "/dev/sdb", // ensure correct disks are selected, use sudo fdisk -l to list all unallocated disks, comma separated
-        "repo": "<full URL to the MapR repository with v7.8.0/ and MEP/MEP-9.3.0/ folders"
-    }
-}
-
-```
-
-Then create inventory.ini file using to this template, changing user, private key file and paths to ezfabricctl and ezfab-release.tgz files. 
-
-Use IP addresses for the hosts and not hostname or fqdn.
-
-```yaml
-
-[all:vars]
-ansible_user=<ssh username>
-ansible_ssh_private_key_file=~/ezlab-key
-ezfabricctl=/usr/local/bin/ezfabricctl
-ezfabrelease=/tmp/ezfab-release.tgz
-
+```ini
 [datafabric]
-<ip address>
+x.x.x.11
 
 [ua_controllers]
-<ip address of controller>
-<ip address of k8s master>
+x.x.x.12
+x.x.x.13
 
 [ua_workers]
-# 3 or more
-<ip address of k8s worker>
-<ip address of k8s worker>
-<ip address of k8s worker>
+x.x.x.14
+x.x.x.15
+x.x.x.16
 
 [ua:children]
 ua_controllers
 ua_workers
 
+[all:vars]
+ansible_user=ezmeral
+; provide credentials here or with -k command line option
+; ansible_ssh_private_key_file=~/ezlab-key
+; ansible_ssh_pass=Admin123.
+
+cidr=x.x.x.0/24
+gateway=x.x.x..1
+domain=ezmeral.lab
+nameserver=x.x.x.1
+timezone=Europe/London
+
+proxy=http://x.x.x.1:3128/
+yumrepo=http://x.x.x.2/yum/
+epelrepo=http://x.x.x.2/epel/8/
+
+[datafabric:vars]
+df_core_version=7.8.0
+df_mep_version=9.3.0
+
+df_clustername=datafabric
+; fix as needed, have to be unformatted raw disk, no partition, no filesystem
+df_disks=/dev/sdb
+; change at will
+df_username=mapr
+df_password=mapr
+df_repo=http://x.x.x.2/mapr
+
+[ua:vars]
+ua_username=admin
+ua_password=Admin123.
+ua_clustername=ua
+registryUrl=x.x.x.2:5000/ezmeral/
+registryInsecure=true
+registryCaFile=
+registryUsername=
+registryPassword=
+
+ezfabricctl=/usr/local/bin/ezfabricctl
+ezfabrelease=/tmp/ezfab-release.tgz
+
 ```
 
 Then you can start installation using:
 
-`ansible-playbook -i inventory.ini --extra-vars="@demo.json" install-ua.yml`
-
-Replace @demo.json with the correct filename if needed.
+`ansible-playbook -i inventory.ini install-ua.yml`
 
 If using password to login (and not an SSH private_key):
 
 `ansible-playbook -k -i inventory.ini --extra-vars="@demo.json" install-ua.yml`
 
-If ssh user doesn't have passwordless sudo, run the command with -K param:
-
-`ansible-playbook -kK -i inventory.ini --extra-vars="@demo.json" install-ua.yml`
-
 When you see the "Install DF using stanza" task, you may follow the installation progress for DF on https://<datafabric node>:9443/ using username: mapr and password: mapr. That step takes ~30 minutes to complete.
 
 Once the playbook is finished, you should use the EZUA Installer UI to proceed and complete the installation with the provided parameters for each page.
+
+Assuming you have the software, you can start the installer using `./start-ezua-installer-ui.sh` script.
 
 You may also use individual playbooks if you want. 
 
 ./install-df.yml will only install Data Fabric
 
 ./playbooks/ua/install.yml will only install Unified Analytics (assuming DF is already installed and running)
-
