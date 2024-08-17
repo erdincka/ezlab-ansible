@@ -20,7 +20,7 @@
 
     - name: Run Installer
       ansible.builtin.command:
-        cmd: "/tmp/mapr-setup.sh -y -r {{ df_repo }}"
+        cmd: "/tmp/mapr-setup.sh -y -r {{ df_repo if df_repo.endswith('/') else df_repo + '/' }}"
         creates: "/opt/mapr/installer/bin/mapr-installer-cli"
       register: installer_setup
 
@@ -44,6 +44,10 @@
         connect_timeout: 3
         delay: 5
         timeout: 120
+
+    - name: Go get some coffee/tea
+      ansible.builtin.debug:
+        msg: "This will take some time, you can monitor the status at: https://mapr:mapr@{{ groups.datafabric.0 }}:9443/"
 
     - name: Start installation using stanza
       ansible.builtin.command:

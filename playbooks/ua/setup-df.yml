@@ -4,21 +4,22 @@
   become: true
 
   vars:
-    pwd_filepath: "/tmp/ezlab/{{ hostvars[groups['ua'][0]].ua_clustername }}/ua_df_password"
+    ua_settings: "{{ hostvars[groups['ua'][0]] }}"
+    pwd_filepath: "/tmp/ezlab/{{ ua_settings.ua_clustername }}/ua_df_password"
     pwd_alias: "{{ lookup('ansible.builtin.password', pwd_filepath, length=12) }}"
 
   tasks:
     - name: Ensure group
       ansible.builtin.group:
-        name: "{{ hostvars[groups['ua'][0]].ua_df_username }}"
+        name: "{{ ua_settings.ua_df_username }}"
         state: present
 
     - name: Ensure user
       ansible.builtin.user:
-        name: "{{ hostvars[groups['ua'][0]].ua_df_username }}"
+        name: "{{ ua_settings.ua_df_username }}"
         password: "{{ pwd_alias | password_hash('sha512') }}"
-        group: "{{ hostvars[groups['ua'][0]].ua_df_username }}"
-        home: "/home/{{ hostvars[groups['ua'][0]].ua_df_username }}"
+        group: "{{ ua_settings.ua_df_username }}"
+        home: "/home/{{ ua_settings.ua_df_username }}"
         shell: /bin/bash
 
 
@@ -27,30 +28,38 @@
   become: true
 
   vars:
-    pwd_filepath: "/tmp/ezlab/{{ hostvars[groups['ua'][0]].ua_clustername }}/ua_df_password"
+    ua_settings: "{{ hostvars[groups['ua'][0]] }}"
+    df_settings: "{{ hostvars[groups['datafabric'][0]] }}"
+    pwd_filepath: "/tmp/ezlab/{{ ua_settings.ua_clustername }}/ua_df_password"
     pwd_alias: "{{ lookup('ansible.builtin.password', pwd_filepath, length=12) }}"
 
   tasks:
+    - name: Copy IAM policy json
+      ansible.builtin.template:
+        src: s3_iam_policy.json.j2
+        dest: /tmp/s3_iam_policy.json
+        mode: "0o644"
+
     # TODO: should run separate tasks and handle failure properly
     - name: Setup DF credentials
       ansible.builtin.shell:
         cmd: |
           set -euo pipefail
           # login as cluster admin to run these commands
-          echo "{{ hostvars[groups['datafabric'][0]].df_password }}" | maprlogin password -user {{ hostvars[groups['datafabric'][0]].df_username }}
+          echo "{{ df_settings.df_password }}" | maprlogin password -user {{ df_settings.df_username }}
 
           # allow user to login
-          maprcli acl edit -type cluster -user {{ hostvars[groups['ua'][0]].ua_df_username }}:login,cv
+          maprcli acl edit -type cluster -user {{ ua_settings.ua_df_username }}:login,cv
 
           # ignore volume create errors, since 'volume exists' also returns error
-          maprcli volume create -name ezua-base-volume -path {{ hostvars[groups['ua'][0]].ua_df_mount_path }} -type rw -json \
-            -rootdiruser {{ hostvars[groups['ua'][0]].ua_df_username }} -rootdirgroup {{ hostvars[groups['ua'][0]].ua_df_username }} -createparent 1 || true
+          maprcli volume create -name ezua-base-volume -path {{ ua_settings.ua_df_mount_path }} -type rw -json \
+            -rootdiruser {{ ua_settings.ua_df_username }} -rootdirgroup {{ ua_settings.ua_df_username }} -createparent 1 || true
 
           # generate tenantticket
-          [ -f /tmp/maprtenantticket ] || maprlogin generateticket -type tenant -user {{ hostvars[groups['ua'][0]].ua_df_username }} -out /tmp/maprtenantticket
+          [ -f /tmp/maprtenantticket ] || maprlogin generateticket -type tenant -user {{ ua_settings.ua_df_username }} -out /tmp/maprtenantticket
 
           # test new user login
-          # echo "{{ pwd_alias }}" | maprlogin password -user {{ hostvars[groups['ua'][0]].ua_df_username }}
+          # echo "{{ pwd_alias }}" | maprlogin password -user {{ ua_settings.ua_df_username }}
 
         creates: "/tmp/maprtenantticket"
 
@@ -75,7 +84,7 @@
     # TODO: check key generation failures
     - name: Create S3 keys
       ansible.builtin.shell:
-        cmd: "maprcli s3keys generate -domainname primary -accountname default -username {{ hostvars[groups['ua'][0]].ua_df_username }} -json > /tmp/s3_keys.json"
+        cmd: "maprcli s3keys generate -domainname primary -accountname default -username {{ ua_settings.ua_df_username }} -json > /tmp/s3_keys.json"
         creates: "/tmp/s3_keys.json"
 
     - name: Save settings for DF
@@ -90,7 +99,7 @@
     - name: Get DF files
       ansible.builtin.fetch:
         src: "{{ item }}"
-        dest: "/tmp/ezlab/{{ hostvars[groups['ua'][0]].ua_clustername }}/"
+        dest: "/tmp/ezlab/{{ ua_settings.ua_clustername }}/"
         flat: true
       with_items:
         - "/opt/mapr/conf/ca/chain-ca.pem"
