@@ -7,3 +7,4 @@ ua-templates/
 *.json
 inventory-*.ini
 *License*.txt
+**/.DS_Store
