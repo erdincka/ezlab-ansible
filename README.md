@@ -1,12 +1,12 @@
 # Install EDF and EzUA
 
-Ezmeral Data Fabric is pre-requisites for Ezmeral Unified Analytics as of v1.5.
+Ezmeral Data Fabric is required for Ezmeral Unified Analytics as of v1.5.
 
 So we are installing Data Fabric first, and then Unified Analytics.
 
-First, create inventory.ini file using to this template, changing as needed.
+First, create inventory.ini file using the template below.
 
-Use IP addresses (makes scripting easier)
+**Use IP addresses (makes scripting easier!)**
 
 ```ini
 [datafabric]
@@ -43,12 +43,13 @@ df_core_version=7.8.0
 df_mep_version=9.3.0
 
 df_clustername=datafabric
-; fix as needed, have to be unformatted raw disk, no partition, no filesystem
+; change to fit your hosts, have to be unformatted raw disk, no partition, no filesystem!
+; comma separated disks, no spaces, ie, /dev/vdb,/dev/vdc
 df_disks=/dev/sdb
 ; change at will
 df_username=mapr
 df_password=mapr
-df_repo=http://x.x.x.2/mapr
+df_repo=http://x.x.x.2/mapr/
 
 [ua:vars]
 ua_username=admin
@@ -62,8 +63,9 @@ registryCaFile=
 registryUsername=
 registryPassword=
 
-ezfabricctl=/usr/local/bin/ezfabricctl
-ezfabrelease=/tmp/ezfab-release.tgz
+; these are not used
+; ezfabricctl=/usr/local/bin/ezfabricctl
+; ezfabrelease=/tmp/ezfab-release.tgz
 
 ```
 
@@ -75,11 +77,11 @@ If using password to login (and not an SSH private_key):
 
 `ansible-playbook -k -i inventory.ini --extra-vars="@demo.json" install-ua.yml`
 
-When you see the "Install DF using stanza" task, you may follow the installation progress for DF on https://<datafabric node>:9443/ using username: mapr and password: mapr. That step takes ~30 minutes to complete.
+When you see the "Install DF using stanza" task, you may follow the installation progress for DF on https://df.host:9443/ using username: mapr and password: mapr. That step takes ~30 minutes to complete.
 
 Once the playbook is finished, you should use the EZUA Installer UI to proceed and complete the installation with the provided parameters for each page.
 
-Assuming you have the software, you can start the installer using `./start-ezua-installer-ui.sh` script.
+Assuming you have the software, you can start the installer using `./start-ezua-installer-ui.sh` script, and continue the UA installation over the Web UI.
 
 You may also use individual playbooks if you want. 
 
