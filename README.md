@@ -31,10 +31,7 @@ ansible_user=ezmeral
 ; ansible_ssh_private_key_file=~/ezlab-key
 ; ansible_ssh_pass=Admin123.
 
-cidr=x.x.x.0/24
-gateway=x.x.x..1
 domain=ezmeral.lab
-nameserver=x.x.x.1
 timezone=Europe/London
 
 proxy=http://x.x.x.1:3128/
@@ -57,6 +54,8 @@ df_repo=http://x.x.x.2/mapr
 ua_username=admin
 ua_password=Admin123.
 ua_clustername=ua
+ua_df_username=ezua
+ua_df_mount_path=/ezua
 registryUrl=x.x.x.2:5000/ezmeral/
 registryInsecure=true
 registryCaFile=

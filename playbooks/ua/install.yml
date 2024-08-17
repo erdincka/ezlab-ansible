@@ -11,6 +11,9 @@
   connection: local
 
   vars:
+    # from hostvars
+    ua_settings: "{{ hostvars[groups['ua'][0]] }}"
+
     # Generic params
     sshpassword_b64: "{{ ansible_ssh_pass | trim | b64encode }}"
 
@@ -22,32 +25,32 @@
     master: "{{ groups['ua_controllers'][1] }}"
     workers: "{{ groups['ua_workers'] }}"
 
-    ezpassword_b64: "{{ hostvars[groups['ua'][0]].ua_password | trim | b64encode }}"
+    ezpassword_b64: "{{ ua_settings.ua_password | trim | b64encode }}"
 
     auth_data:
       admin_user:
         fullname: Ezmeral Admin
         email: "ezadmin@{{ domain }}"
-        username: "{{ hostvars[groups['ua'][0]].ua_username }}"
-        password: "{{ hostvars[groups['ua'][0]].ua_password }}"
+        username: "{{ ua_settings.ua_username }}"
+        password: "{{ ua_settings.ua_password }}"
 
     authdata_b64: "{{ auth_data | from_yaml | trim | b64encode }}"
 
-    registryPassword_b64: "{{ hostvars[groups['ua'][0]].registryPassword | default('') | trim | b64encode }}"
+    registryPassword_b64: "{{ ua_settings.registryPassword | default('') | trim | b64encode }}"
 
     # DF settings
-    df_password: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ hostvars[groups['ua'][0]].ua_clustername ~ '/ua_admin_password') }}"
-    tenant_ticket: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ hostvars[groups['ua'][0]].ua_clustername ~ '/maprtenantticket') }}"
-    cldb_hosts: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ hostvars[groups['ua'][0]].ua_clustername ~ '/cldb_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
-    rest_hosts: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~hostvars[groups['ua'][0]]. ua_clustername ~ '/rest_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
-    s3_hosts: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ hostvars[groups['ua'][0]].ua_clustername ~ '/s3_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
-    s3_access_key: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ hostvars[groups['ua'][0]].ua_clustername ~ '/s3_keys.json') | from_json | community.general.json_query('data[*].accesskey') | first }}"
-    s3_secret_key: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ hostvars[groups['ua'][0]].ua_clustername ~ '/s3_keys.json') | from_json | community.general.json_query('data[*].secretkey') | first }}"
+    df_password: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ ua_settings.ua_clustername ~ '/ua_df_password') }}"
+    tenant_ticket: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ ua_settings.ua_clustername ~ '/maprtenantticket') }}"
+    cldb_hosts: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ ua_settings.ua_clustername ~ '/cldb_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
+    rest_hosts: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ua_settings. ua_clustername ~ '/rest_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
+    s3_hosts: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ ua_settings.ua_clustername ~ '/s3_nodes.json') | from_json | community.general.json_query('data[*].hostname') | list }}"
+    s3_access_key: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ ua_settings.ua_clustername ~ '/s3_keys.json') | from_json | community.general.json_query('data[*].accesskey') | first }}"
+    s3_secret_key: "{{ lookup('ansible.builtin.file', '/tmp/ezlab/' ~ ua_settings.ua_clustername ~ '/s3_keys.json') | from_json | community.general.json_query('data[*].secretkey') | first }}"
 
   tasks:
     - name: EZUA installer data
       ansible.builtin.copy:
-        dest: "/tmp/ezlab/{{ hostvars[groups['ua'][0]].ua_clustername }}/ua-install-settings.txt"
+        dest: "/tmp/ezlab/{{ ua_settings.ua_clustername }}/ua-install-settings.txt"
         mode: "0o644"
         content: |
           EZUA Installer UI inputs:
@@ -63,17 +66,17 @@
 
           --- Page 2
 
-          Installation Name: {{ hostvars[groups['ua'][0]].ua_clustername }}
-          Domain Name: {{ hostvars[groups['ua'][0]].ua_clustername ~ '.' ~ domain }}
+          Installation Name: {{ ua_settings.ua_clustername }}
+          Domain Name: {{ ua_settings.ua_clustername ~ '.' ~ domain }}
           vCPU: 96
           High Availability: Not checked
           Use GPU: Not checked
           Air Gap Environment: Not checked
 
-          Registry URL: {{ hostvars[groups['ua'][0]].registryUrl }}
-          Registry Username: {{ hostvars[groups['ua'][0]].registryUsername }}
-          Registry Password: {{ hostvars[groups['ua'][0]].registryPassword | default('') }}
-          Registry Insecure: {{ hostvars[groups['ua'][0]].registryInsecure }}
+          Registry URL: {{ ua_settings.registryUrl }}
+          Registry Username: {{ ua_settings.registryUsername }}
+          Registry Password: {{ ua_settings.registryPassword | default('') }}
+          Registry Insecure: {{ ua_settings.registryInsecure }}
 
           Add certificates as needed!!!
 
@@ -88,7 +91,7 @@
           Username: admin
           Full Name: Ez Admin
           Email: ezadmin@{{ domain }}
-          Password: {{ hostvars[groups['ua'][0]].ua_password }}
+          Password: {{ ua_settings.ua_password }}
 
           --- Page 4
 
@@ -98,21 +101,21 @@
 
           Data Volumes
 
-          CLDB Hosts: {{ cldb_hosts | join(':7222,') }}
-          Rest Servers: {{ rest_hosts | join('8443,') }}
+          CLDB Hosts: {{ cldb_hosts | join(':7222,') }}:7222
+          Rest Servers: {{ rest_hosts | join('8443,') }}:8443
           Tenant Ticket: {{ tenant_ticket }}
-          Username: {{ hostvars[groups['datafabric'][0]].df_username }}
-          Password: {{ hostvars[groups['datafabric'][0]].df_password }}
-          CA Certificate: /tmp/ezlab/{{ hostvars[groups['ua'][0]].ua_clustername }}/chain-ca.pem
-          Mount Prefix: {{ hostvars[groups['ua'][0]].ua_df_mount_path }}
+          Username: {{ ua_settings.ua_df_username }}
+          Password: {{ df_password }}
+          CA Certificate: /tmp/ezlab/{{ ua_settings.ua_clustername }}/chain-ca.pem
+          Mount Prefix: {{ ua_settings.ua_df_mount_path }}
 
           Object Store
 
           Object Source: Ezmeral Data Fabric S3
-          End Point: https://{{ s3_hosts | first }} :9000
+          End Point: https://{{ s3_hosts | first }}:9000
           Access Key: {{ s3_access_key }}
           Secret Key: {{ s3_secret_key }}
-          Root Certificate: /tmp/ezlab/{{ hostvars[groups['ua'][0]].ua_clustername }}/chain-ca.pem
+          Root Certificate: /tmp/ezlab/{{ ua_settings.ua_clustername }}/chain-ca.pem
 
 
     # - name: Copy stanza files

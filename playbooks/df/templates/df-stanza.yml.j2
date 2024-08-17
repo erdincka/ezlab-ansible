@@ -24,8 +24,10 @@ config:
   metrics_ui_admin_password: {{ df_password }}
   enable_encryption_at_rest: True
   services:
-    template-60-maprxd:
     # template-05-converged:
+    template-60-maprxd:
+    mapr-grafana:
+      enabled: False
     # mapr-ezotelcol:
     # mapr-opentsdb: # required for collectd
     # mapr-collectd:

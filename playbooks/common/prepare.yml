@@ -82,7 +82,19 @@
     - plus
   notify: Update dnf cache
 
-- name: Disable internet repos - RHEL
+- name: Set local EPEL repositories
+  ansible.builtin.yum_repository:
+    name: "local-epel"
+    description: "Local EPEL repository"
+    baseurl: "{{ epelrepo }}"
+    file: local
+    gpgcheck: false
+    enabled: true
+    priority: 1
+  when: epelrepo is defined and epelrepo | length > 0
+  notify: Update dnf cache
+
+- name: Disable subscription repos - RHEL
   ansible.builtin.lineinfile:
     regexp: ^enabled=0
     line: enabled=1
@@ -90,7 +102,29 @@
   loop:
     - /etc/yum/pluginconf.d/product-id.conf
     - /etc/yum/pluginconf.d/subscription-manager.conf
+  when: yumrepo is defined and yumrepo | length > 0
+  notify: Update dnf cache
 
 - name: Set Locale to en_US.UTF-8
   ansible.builtin.command:
     cmd: localectl set-locale LANG=en_US.UTF-8
+  register: setlocalecmd
+  changed_when: setlocalecmd.rc == 0
+
+- name: Add hosts to /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ ansible_default_ipv4.address }} {{ ansible_fqdn }} {{ ansible_hostname }}"
+    search_string: "{{ ansible_fqdn }}"
+
+- name: Replace cloud-init settings
+  ansible.builtin.lineinfile:
+    path: /etc/cloud/cloud.cfg
+    line: "'{{ item.line }}'"
+    search_string: "{{ item.search }}"
+  loop:
+    # This is unsecure -- possibly not needed at all
+    - { line: "disable_root: false", search: "disable_root" }
+    - { line: "ssh_pwauth: 1", search: "ssh_pwauth" }
+    - { line: "preserve_hostname: true", search: "preserve_hostname" }
+    - { line: "manage_etc_hosts: false", search: "manage_etc_hosts" }
