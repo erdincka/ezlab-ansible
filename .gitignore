@@ -5,6 +5,7 @@ log/
 .ez*
 ua-templates/
 *.json
-inventory-*.ini
+*-servers.ini
 *License*.txt
 **/.DS_Store
+.venv/

@@ -1,0 +1,26 @@
+---
+
+- name: Install with ILO
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+
+  # - name: Gather facts from a HP iLO interface only if the system is an HP server
+  #   community.general.hpilo_info:
+  #     host: "{{ groups['ilo'].0 }}"
+  #     login: "{{ ilo_user }}"
+  #     password: "{{ ilo_pass }}"
+
+  #   register: results
+
+  # - ansible.builtin.debug:
+  #     var: results
+
+  - name: Boot from ISO image
+    hpilo_boot:
+      host: "{{ groups['ilo'].0 }}"
+      login: "{{ ilo_user }}"
+      password: "{{ ilo_pass }}"
+      media: cdrom
+      image: "{{ iso_url }}"

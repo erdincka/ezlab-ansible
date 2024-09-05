@@ -1,7 +1,8 @@
 ---
 
-- name: Install DF as it is required
+# Install DF and UA playbooks
+- name: Install DF Playbook
   ansible.builtin.import_playbook: playbooks/df/install.yml
 
-- name: Install UA
+- name: Install UA Playbook
   ansible.builtin.import_playbook: playbooks/ua/install.yml
